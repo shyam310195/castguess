@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0C1428" />
+  <title>CastGuess Sound Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root { --bg: #0C1428; --s1: #131D38; --s2: #1B2745; --b1: #2A3654; --b2: #3A4766; --gold: #E2C27A; --gold-h: #F1D9A0; --text: #F4EFE4; --muted: #B9B3A6; --dim: #8E97AE; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    main { max-width: 860px; margin: 0 auto; padding: max(24px, env(safe-area-inset-top)) 20px 40px; }
+    .label { font-size: 12px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); }
+    h1 { font-family: 'Playfair Display', Georgia, serif; font-size: 40px; margin: 8px 0 6px; }
+    h1 em { color: var(--gold); }
+    .lead { color: var(--muted); line-height: 1.6; margin: 0 0 22px; max-width: 560px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 14px; }
+    .card { background: var(--s1); border: 1px solid var(--b1); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+    .card.picked { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+    .head { display: flex; align-items: center; gap: 12px; }
+    .letter { width: 44px; height: 44px; border-radius: 12px; background: var(--s2); color: var(--gold); display: grid; place-items: center; font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; flex: 0 0 auto; }
+    .card.current .letter { color: var(--dim); }
+    .head h2 { margin: 0; font-family: 'Playfair Display', serif; font-size: 22px; }
+    .head p { margin: 2px 0 0; color: var(--muted); font-size: 14px; line-height: 1.4; }
+    .tag { margin-left: auto; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--bg); background: var(--gold); padding: 4px 8px; border-radius: 999px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    button { font: inherit; cursor: pointer; }
+    .play { flex: 1 1 auto; min-height: 56px; border-radius: 999px; border: 1px solid var(--gold); background: transparent; color: var(--gold); font-weight: 700; font-size: 17px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .play:hover { background: rgba(226,194,122,.1); }
+    .small { min-height: 44px; border-radius: 999px; border: 1px solid var(--b2); background: transparent; color: var(--text); font-weight: 600; font-size: 14px; padding: 0 16px; }
+    .pick { min-height: 44px; border-radius: 999px; border: 0; background: var(--gold); color: var(--bg); font-weight: 700; font-size: 14px; padding: 0 18px; }
+    .pick:hover { background: var(--gold-h); }
+    .playing { animation: pulse .6s ease 2; }
+    @keyframes pulse { 50% { transform: scale(1.03); } }
+    .toast { width: min(460px, calc(100% - 32px)); position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--s2); border: 1px solid var(--gold); color: var(--text); padding: 14px 20px; border-radius: 16px; font-size: 15px; max-width: calc(100% - 32px); text-align: center; line-height: 1.5; }
+    .toast b { color: var(--gold); }
+    .note { color: var(--dim); font-size: 13px; margin-top: 22px; line-height: 1.6; }
+    :focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+  </style>
+</head>
+<body>
+<main>
+  <div class="label">CastGuess · Sound lab</div>
+  <h1>Pick your <em>winning sound</em></h1>
+  <p class="lead">Each sound plays when someone guesses a film correctly. “Big” is for a first-clue guess, “Just made it” is the quieter version for a last-clue guess. Turn your volume up, play a few, then tap <b>Pick this</b> on your favourite.</p>
+  <div class="grid" id="grid"></div>
+  <p class="note">All sounds are generated live in the browser, so there are no audio files, no cost and no licensing to worry about.</p>
+</main>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+/* =====================================================================
+   WIN SOUNDS. Self-contained: copy createWinSounds() into the app and call
+   winSounds[id].play(level), where level is 3 = big (clue 1), 2 = medium
+   (clues 2–3) or 1 = "just made it" (clue 4).
+   ===================================================================== */
+function createWinSounds() {
+  let ctx, out, verb;
+  function ac() {
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
+      out = ctx.createGain(); out.gain.value = 0.9; out.connect(comp).connect(ctx.destination);
+      // small generated reverb so everything sounds less "beepy"
+      verb = ctx.createConvolver(); const len = ctx.sampleRate * 1.6, ir = ctx.createBuffer(2, len, ctx.sampleRate);
+      for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
+      verb.buffer = ir; const wet = ctx.createGain(); wet.gain.value = 0.28; verb.connect(wet).connect(out);
+    }
+    if (ctx.state === "suspended") ctx.resume();
+    return ctx;
+  }
+  const now = () => ac().currentTime;
+  function bus(gain = 1, rev = true) { const g = ctx.createGain(); g.gain.value = gain; g.connect(out); if (rev) g.connect(verb); return g; }
+  function env(param, t, a, peak, d, sustain = 0.0001) { param.cancelScheduledValues(t); param.setValueAtTime(0.0001, t); param.exponentialRampToValueAtTime(peak, t + a); param.exponentialRampToValueAtTime(Math.max(sustain, 0.0001), t + a + d); }
+  function noiseBuf(sec) { const n = Math.floor(ctx.sampleRate * sec), b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; return b; }
+  const hz = m => 440 * Math.pow(2, (m - 69) / 12);   // MIDI note -> Hz
+
+  // --- building blocks ---
+  function brass(t, midi, dur, vol, dest) {
+    const g = ctx.createGain(), f = ctx.createBiquadFilter(); f.type = "lowpass"; f.Q.value = 2;
+    f.frequency.setValueAtTime(400, t); f.frequency.exponentialRampToValueAtTime(3200, t + 0.06); f.frequency.exponentialRampToValueAtTime(1400, t + dur);
+    [-6, 6, 0].forEach(det => { const o = ctx.createOscillator(); o.type = "sawtooth"; o.frequency.value = hz(midi); o.detune.value = det; o.connect(f); o.start(t); o.stop(t + dur + 0.1); });
+    const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 5.5; lg.gain.value = 6; lfo.connect(lg);
+    f.connect(g).connect(dest); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.03); g.gain.setValueAtTime(vol * 0.8, t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.08);
+  }
+  function bell(t, midi, vol, dest, decay = 1.4, ratio = 3.5) {
+    const c = ctx.createOscillator(), m = ctx.createOscillator(), mg = ctx.createGain(), g = ctx.createGain(), f = hz(midi);
+    c.frequency.value = f; m.frequency.value = f * ratio; mg.gain.setValueAtTime(f * 2.2, t); mg.gain.exponentialRampToValueAtTime(f * 0.05, t + decay);
+    m.connect(mg).connect(c.frequency); c.connect(g).connect(dest); env(g.gain, t, 0.004, vol, decay);
+    c.start(t); m.start(t); c.stop(t + decay + 0.1); m.stop(t + decay + 0.1);
+  }
+  function pluck(t, midi, vol, dest, decay = 1.1) {
+    const o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+    o.type = "triangle"; o2.type = "sine"; o.frequency.value = hz(midi); o2.frequency.value = hz(midi) * 2;
+    f.type = "lowpass"; f.frequency.setValueAtTime(5000, t); f.frequency.exponentialRampToValueAtTime(900, t + decay);
+    const g2 = ctx.createGain(); g2.gain.value = 0.25; o2.connect(g2).connect(f); o.connect(f).connect(g).connect(dest);
+    env(g.gain, t, 0.003, vol, decay); o.start(t); o2.start(t); o.stop(t + decay + 0.05); o2.stop(t + decay + 0.05);
+  }
+  function clap(t, vol, dest) {
+    const s = ctx.createBufferSource(); s.buffer = noiseBuf(0.12); const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 1200 + Math.random() * 1400; f.Q.value = 1.2;
+    const g = ctx.createGain(); s.connect(f).connect(g).connect(dest); env(g.gain, t, 0.002, vol, 0.09); s.start(t);
+  }
+  function cymbal(t, vol, dest, dur = 1.5, swell = 0) {
+    const s = ctx.createBufferSource(); s.buffer = noiseBuf(dur + swell + 0.1); const f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 6000;
+    const g = ctx.createGain(); s.connect(f).connect(g).connect(dest);
+    g.gain.setValueAtTime(0.0001, t);
+    if (swell) g.gain.exponentialRampToValueAtTime(vol * 0.6, t + swell);
+    g.gain.exponentialRampToValueAtTime(vol, t + swell + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + swell + dur); s.start(t);
+  }
+  function timpani(t, vol, dest) {
+    const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(65, t + 0.4);
+    o.connect(g).connect(dest); env(g.gain, t, 0.005, vol, 0.7); o.start(t); o.stop(t + 0.8);
+  }
+
+  return {
+    current: {
+      name: "Current", desc: "What the app plays today: a quick arpeggio plus applause.",
+      play(level = 3) {
+        ac(); const t = now(), b = bus(1, false);
+        const notes = level >= 3 ? [72, 76, 79, 84, 88] : level === 2 ? [72, 76, 79, 84] : [81, 88];
+        notes.forEach((m, i) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = level === 1 ? "sine" : "triangle"; o.frequency.value = hz(m); o.connect(g).connect(b); env(g.gain, t + i * 0.085, 0.012, 0.16, 0.5); o.start(t + i * 0.085); o.stop(t + i * 0.085 + 0.6); });
+        if (level >= 3) { const n = Math.floor(ctx.sampleRate * 2.2), buf = ctx.createBuffer(1, n, ctx.sampleRate), d = buf.getChannelData(0); let c = 0; for (let i = 0; i < n; i++) { if (Math.random() < .0016) c = 1; c *= .9965; const e = Math.min(1, i / (ctx.sampleRate * .15)) * Math.min(1, (n - i) / (ctx.sampleRate * .6)); d[i] = (Math.random() * 2 - 1) * (.18 + c) * e; } const s = ctx.createBufferSource(); s.buffer = buf; const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 2000; f.Q.value = .5; const g = ctx.createGain(); g.gain.value = .9; s.connect(f).connect(g).connect(b); s.start(t + .35); }
+      },
+    },
+    fanfare: {
+      name: "Fanfare", desc: "Short, triumphant brass: ta-ta-ta-DAAA.",
+      play(level = 3) {
+        ac(); const t = now() + 0.02, b = bus(0.9);
+        if (level === 1) { brass(t, 67, 0.14, 0.18, b); brass(t + 0.16, 72, 0.45, 0.2, b); return; }
+        [0, 0.13, 0.26].forEach(d => brass(t + d, 67, 0.1, 0.2, b));
+        brass(t + 0.39, 72, level >= 3 ? 0.8 : 0.55, 0.24, b);
+        if (level >= 3) { brass(t + 0.39, 76, 0.8, 0.14, b); brass(t + 0.39, 79, 0.8, 0.12, b); timpani(t + 0.39, 0.5, b); cymbal(t + 0.39, 0.12, b, 1.2); }
+      },
+    },
+    chime: {
+      name: "Award chime", desc: "Bright glockenspiel arpeggio with a sparkle on top.",
+      play(level = 3) {
+        ac(); const t = now() + 0.02, b = bus(0.8);
+        const notes = level >= 3 ? [84, 88, 91, 96, 100] : level === 2 ? [84, 88, 91, 96] : [91, 96];
+        notes.forEach((m, i) => bell(t + i * 0.075, m, 0.22, b, level === 1 ? 1.0 : 1.6));
+        if (level >= 2) for (let i = 0; i < (level >= 3 ? 10 : 5); i++) bell(t + 0.35 + i * 0.045, 100 + (i % 5) * 2, 0.04, b, 0.5, 5.2);
+      },
+    },
+    applause: {
+      name: "Applause burst", desc: "A crowd clapping swell with a little sparkle.",
+      play(level = 3) {
+        ac(); const t = now() + 0.02, b = bus(0.9);
+        const dur = level >= 3 ? 1.9 : level === 2 ? 1.2 : 0.6, count = level >= 3 ? 110 : level === 2 ? 55 : 14;
+        for (let i = 0; i < count; i++) { const x = Math.random(), at = t + dur * Math.pow(x, 0.8); const swell = Math.sin(Math.PI * Math.min(1, (at - t) / dur)); clap(at, 0.12 + 0.35 * swell, b); }
+        if (level >= 2) [96, 100, 103].forEach((m, i) => bell(t + 0.05 + i * 0.07, m, 0.07, b, 0.9));
+        if (level >= 3) { const s = ctx.createBufferSource(); s.buffer = noiseBuf(1.2); const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 900; f.Q.value = 0.4; const g = ctx.createGain(); s.connect(f).connect(g).connect(b); g.gain.setValueAtTime(0.0001, t + 0.3); g.gain.exponentialRampToValueAtTime(0.06, t + 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.5); s.start(t + 0.3); }
+      },
+    },
+    coins: {
+      name: "Jackpot coins", desc: "A fast rising cascade of dings, like a slot machine win.",
+      play(level = 3) {
+        ac(); const t = now() + 0.02, b = bus(0.6);
+        const coin = (at, m, vol) => { [0, 7].forEach((st, k) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = "square"; o.frequency.value = hz(m + st); o.connect(g).connect(b); const s = at + k * 0.07; env(g.gain, s, 0.002, vol, k ? 0.35 : 0.07); o.start(s); o.stop(s + 0.45); }); };
+        if (level === 1) { coin(t, 83, 0.07); return; }
+        const n = level >= 3 ? 12 : 6;
+        for (let i = 0; i < n; i++) coin(t + i * 0.055, 76 + [0, 4, 7, 12, 16, 19][i % 6] + (i >= 6 ? 12 : 0), 0.05);
+        if (level >= 3) [88, 91, 95, 100].forEach((m, i) => bell(t + n * 0.055 + i * 0.03, m, 0.09, b, 1.0));
+      },
+    },
+    orchestra: {
+      name: "Orchestra hit", desc: "A big punchy chord stab and a cymbal crash.",
+      play(level = 3) {
+        ac(); const t = now() + 0.02, b = bus(0.75);
+        const chord = level === 1 ? [60, 67, 72] : [48, 55, 60, 64, 67, 72, 76];
+        const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.setValueAtTime(5000, t); f.frequency.exponentialRampToValueAtTime(700, t + 0.5);
+        const g = ctx.createGain(); f.connect(g).connect(b); env(g.gain, t, 0.006, level === 1 ? 0.18 : 0.3, level >= 3 ? 0.7 : 0.4);
+        chord.forEach(m => [-8, 8].forEach(det => { const o = ctx.createOscillator(); o.type = "sawtooth"; o.frequency.value = hz(m); o.detune.value = det; o.connect(f); o.start(t); o.stop(t + 0.9); }));
+        if (level >= 2) timpani(t, 0.6, b);
+        if (level >= 3) { cymbal(t, 0.25, b, 1.6); brass(t + 0.45, 79, 0.5, 0.12, b); brass(t + 0.45, 84, 0.5, 0.12, b); }
+      },
+    },
+    sparkle: {
+      name: "Soft sparkle", desc: "A gentle harp-like glissando. Calm and elegant.",
+      play(level = 3) {
+        ac(); const t = now() + 0.02, b = bus(0.9);
+        const scale = [72, 74, 76, 79, 81, 84, 86, 88, 91, 93, 96];
+        const notes = level >= 3 ? scale : level === 2 ? scale.slice(0, 7) : [84, 88, 91];
+        notes.forEach((m, i) => pluck(t + i * 0.045, m, 0.16, b, 1.4));
+        if (level >= 3) bell(t + notes.length * 0.045 + 0.05, 96, 0.08, b, 1.8);
+      },
+    },
+  };
+}
+
+// ======================= page =======================
+const KEY = "castguess_win_sound_choice";
+const sounds = createWinSounds();
+const ORDER = ["fanfare", "chime", "applause", "coins", "orchestra", "sparkle", "current"];
+const LETTERS = { fanfare: "A", chime: "B", applause: "C", coins: "D", orchestra: "E", sparkle: "F", current: "·" };
+function picked() { try { return localStorage.getItem(KEY); } catch { return null; } }
+function render() {
+  const p = picked();
+  document.getElementById("grid").innerHTML = ORDER.map(id => {
+    const s = sounds[id];
+    return `<section class="card${id === "current" ? " current" : ""}${p === id ? " picked" : ""}" aria-labelledby="h-${id}">
+      <div class="head"><span class="letter" aria-hidden="true">${LETTERS[id]}</span><div><h2 id="h-${id}">${s.name}</h2><p>${s.desc}</p></div>${p === id ? '<span class="tag">Your pick</span>' : ""}</div>
+      <button class="play" data-play="${id}" data-level="3"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>Play big win</button>
+      <div class="row"><button class="small" data-play="${id}" data-level="2">Medium</button><button class="small" data-play="${id}" data-level="1">Just made it</button>
+      ${id === "current" ? "" : `<span style="flex:1"></span><button class="pick" data-pick="${id}">Pick this</button>`}</div>
+    </section>`;
+  }).join("");
+}
+document.addEventListener("click", e => {
+  const pl = e.target.closest("[data-play]");
+  if (pl) { try { sounds[pl.dataset.play].play(+pl.dataset.level); } catch (err) { toast("Sound couldn't play in this browser."); } pl.classList.remove("playing"); void pl.offsetWidth; pl.classList.add("playing"); return; }
+  const pk = e.target.closest("[data-pick]");
+  if (pk) {
+    const id = pk.dataset.pick; try { localStorage.setItem(KEY, id); } catch { /* ignore */ }
+    render(); sounds[id].play(3);
+    toast(`Saved: <b>${LETTERS[id]} · ${sounds[id].name}</b>. Now tell Claude “I pick ${LETTERS[id]} · ${sounds[id].name}” and it'll go into the game.`);
+  }
+});
+function toast(html) { const t = document.getElementById("toast"); t.innerHTML = html; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 6000); }
+render();
+</script>
+</body>
+</html>
