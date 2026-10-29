@@ -251,6 +251,9 @@
     #confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; }
     .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
+    .seg.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .seg.five button { font-size: 13px; line-height: 1.1; padding: 0 2px; }
+    .diff-note { font-size: 12.5px; color: var(--muted); }
     .seg.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .party-setup { display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--b1); border-radius: 18px; padding: 14px; background: var(--s1); }
     .stepper { display: flex; align-items: center; gap: 10px; }
@@ -317,6 +320,7 @@
     <h1 class="ob-q" id="ob2q">How well do you know your movies?</h1>
     <p class="ob-sub">This sets which actors we show you first.</p>
     <div style="display:flex;flex-direction:column;gap:12px">
+      <button class="choice" data-level="supereasy"><span><strong>Just the hits</strong><small>Super easy · only the biggest blockbusters, lead actors first.</small></span></button>
       <button class="choice" data-level="easy"><span><strong>Casual fan</strong><small>Start with the lead actors.</small></span></button>
       <button class="choice" data-level="medium"><span><strong>Movie buff</strong><small>Two leads and one supporting actor.</small></span></button>
       <button class="choice" data-level="hard"><span><strong>Film nerd</strong><small>Mostly the supporting cast. Good luck.</small></span></button>
@@ -372,9 +376,10 @@
     </div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <div class="label">Difficulty</div>
-      <div class="seg" id="homeDiff" role="group" aria-label="Difficulty">
-        <button data-v="easy">Easy</button><button data-v="medium">Medium</button><button data-v="hard">Hard</button><button data-v="mixed">Mixed</button>
+      <div class="seg five" id="homeDiff" role="group" aria-label="Difficulty">
+        <button data-v="supereasy">Super easy</button><button data-v="easy">Easy</button><button data-v="medium">Medium</button><button data-v="hard">Hard</button><button data-v="mixed">Mixed</button>
       </div>
+      <div class="diff-note" id="homeDiffNote"></div>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <div class="label">Time per clue</div>
@@ -516,7 +521,7 @@
         <button class="chip" data-ind="bollywood"><svg class="tick" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Bollywood</button>
       </div></div>
     <div class="set-group"><div class="label">Difficulty</div>
-      <div class="seg" id="setDiff" role="group" aria-label="Difficulty"><button data-v="easy">Easy</button><button data-v="medium">Medium</button><button data-v="hard">Hard</button><button data-v="mixed">Mixed</button></div></div>
+      <div class="seg five" id="setDiff" role="group" aria-label="Difficulty"><button data-v="supereasy">Super easy</button><button data-v="easy">Easy</button><button data-v="medium">Medium</button><button data-v="hard">Hard</button><button data-v="mixed">Mixed</button></div></div>
     <div class="set-group"><div class="label">Time per clue</div>
       <div class="seg three" id="setTime" role="group" aria-label="Time per clue"><button data-v="15">15 sec</button><button data-v="30">30 sec</button><button data-v="60">1 min</button></div>
       <div class="muted" style="font-size:12px">The daily challenge always uses 15 seconds, so everyone's scores compare fairly.</div>
@@ -583,7 +588,7 @@
 <canvas id="confetti" hidden></canvas>
 <div class="toast" id="toast" hidden role="status"></div>
 
-<script src="movies.js?v=3.6"></script>
+<script src="movies.js?v=3.7"></script>
 <script>
 (() => {
   "use strict";
@@ -618,6 +623,15 @@
     { n: "Act IV", name: "The plot", base: 25, hint: "Last act. Read the synopsis." },
   ];
   const SERIES_SHARE = 0.75;   // a right-series guess earns 75% of the points
+  const DIFF_NOTES = {
+    supereasy: "Only the biggest hits, lead actors first, 4 guesses · scores ×0.8",
+    easy: "Well-known films, starting with the lead actors",
+    medium: "Two leads and one supporting actor",
+    hard: "Every film, mostly the supporting cast",
+    mixed: "A random difficulty for each film",
+  };
+  const DIFF_MULT = { supereasy: 0.8 };
+  const maxWrong = () => G.diff === "supereasy" ? 4 : MAX_WRONG;
   const MAX_WRONG = 3, PENALTY = 10, LIVES = 3, DAILY_COUNT = 5, MAX_SKIPS = 3, MIN_POOL = 10, DAILY_SEC = 15;
   const YEAR_MIN = Math.min(...ALL.map(m => m.year || 9999)), YEAR_MAX = new Date().getFullYear();
   const PRESETS = [["All years", null, null], ["2000+", 2000, null], ["1990+", 1990, null], ["1970–1999", 1970, 1999], ["Before 1970", null, 1969]];
@@ -828,7 +842,7 @@
   function pool() {
     const base = ALL.filter(m => DB.prefs.industries.includes(m.industry) && yearOk(m));
     const min = POP_MIN[DB.prefs.difficulty] || 0;
-    const famous = base.filter(m => m.pop >= min);
+    const famous = DB.prefs.difficulty === "supereasy" ? base.filter(m => m.f) : base.filter(m => m.pop >= min);
     return famous.length >= 30 || famous.length === base.length ? famous : base;   // small selections keep everything
   }
   function yearsText() { const f = DB.prefs.yearFrom, t = DB.prefs.yearTo; return f == null && t == null ? "All" : f == null ? `Up to ${t}` : t == null ? `${f} onwards` : `${f}–${t}`; }
@@ -859,6 +873,7 @@
       m.textContent = n < MIN_POOL ? `Only ${n} film${n === 1 ? " matches" : "s match"}. Widen the years or add an industry (at least ${MIN_POOL} needed).` : `${n} films match your choices`;
     });
     $("#yearsSummary").textContent = yearsText();
+    $("#homeDiffNote").textContent = DIFF_NOTES[DB.prefs.difficulty] || "";
     $("#homeMatchMini").textContent = `· ${n} film${n === 1 ? "" : "s"}`; $("#homeMatchMini").classList.toggle("low", n < MIN_POOL);
   }
   function todayKey() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
@@ -887,7 +902,8 @@
     if (support.length < 2) support = shuffle(movie.cast.filter(c => c.order >= 4), rng);
     const take = (p, n) => p.splice(0, Math.min(n, p.length));
     let initial, extra;
-    if (diff === "easy") { initial = take(leads, 3); extra = take(support, 1)[0]; }
+    if (diff === "supereasy") { initial = take(leads, 3); const next = movie.cast.filter(c => c.order > 3).sort((a, b) => a.order - b.order)[0]; extra = next; support = support.filter(c => c !== next); }
+    else if (diff === "easy") { initial = take(leads, 3); extra = take(support, 1)[0]; }
     else if (diff === "medium") { initial = [...take(leads, 2), ...take(support, 1)]; extra = take(support, 1)[0] || take(leads, 1)[0]; }
     else { initial = [...take(leads, 1), ...take(support, 2)]; extra = take(leads, 1)[0] || take(support, 1)[0]; }
     const rest = [...leads, ...support];
@@ -1240,7 +1256,7 @@
   // ================= guessing =================
   function feedback(msg, kind = "") { const f = $("#feedback"); f.textContent = msg; f.className = "feedback" + (kind ? " " + kind : ""); }
   function updateHintLine() {
-    const left = MAX_WRONG - G.wrong;
+    const left = maxWrong() - G.wrong;
     $("#hintLine").textContent = G.mode === "practice" ? "Practice · not scored" : `${left} guess${left === 1 ? "" : "es"} left · worth up to ${worth()}`;
   }
   function renderTried() { $("#tried").hidden = !G.tried.length; $("#tried").innerHTML = "Not it:" + G.tried.map(t => `<s>${esc(t)}</s>`).join(""); }
@@ -1262,8 +1278,8 @@
     sfx.wrong(); buzz([40, 50, 40]);
     if (G.mode !== "practice") { const f = document.createElement("span"); f.className = "float"; f.textContent = `−${PENALTY}`; $(".guess-row").appendChild(f); setTimeout(() => f.remove(), 1000); }
     if (G.mode === "practice") { feedback(G.wrong >= 2 ? `Not it. Hint: it starts with “${G.movie.title[0]}”.` : "Not it. Try again.", "bad"); if (G.wrong >= 4) endRound(false, "guesses"); return; }
-    if (G.wrong >= MAX_WRONG) { endRound(false, "guesses"); return; }
-    feedback(`Not it. ${MAX_WRONG - G.wrong} guess${MAX_WRONG - G.wrong === 1 ? "" : "es"} left.`, "bad"); updateHintLine(); $("#worthNum").textContent = worth();
+    if (G.wrong >= maxWrong()) { endRound(false, "guesses"); return; }
+    feedback(`Not it. ${maxWrong() - G.wrong} guess${maxWrong() - G.wrong === 1 ? "" : "es"} left.`, "bad"); updateHintLine(); $("#worthNum").textContent = worth();
   }
   function correctGuess(series = false) {
     if (G.over || G.whoPending) return;
@@ -1276,7 +1292,7 @@
     G.whoPending = { at: now }; G.frozenP = points(now); cancelAnimationFrame(G.raf); voiceStop(); hideSugg();
     sfx.near(); buzz(40);
     $("#whoKicker").textContent = `Correct! It's ${G.movie.title}`;
-    $("#whoPts").textContent = `Worth ${Math.round(Math.max(0, G.frozenP.base + G.frozenP.bonus - G.frozenP.penalty) * (G.seriesHit ? SERIES_SHARE : 1))} points${G.seriesHit ? " · right series" : ""}`;
+    $("#whoPts").textContent = `Worth ${Math.round(Math.max(0, G.frozenP.base + G.frozenP.bonus - G.frozenP.penalty) * (G.seriesHit ? SERIES_SHARE : 1) * (DIFF_MULT[G.diff] || 1))} points${G.seriesHit ? " · right series" : ""}`;
     $("#whoList").innerHTML = G.players.map((pl, i) => `<button data-who="${i}"><span class="dot" style="background:${pl.color}" aria-hidden="true"></span>${esc(pl.name)}</button>`).join("");
     $("#whoSheet").hidden = false;
   }
@@ -1355,7 +1371,7 @@
     if (G.mode === "party") {
       const who = G.cur >= 0 ? G.cur : G.credit;
       if (won && who >= 0) {
-        pts = Math.round(Math.max(0, p.base + p.bonus - p.penalty) * (G.seriesHit ? SERIES_SHARE : 1)); const pl = G.players[who];
+        pts = Math.round(Math.max(0, p.base + p.bonus - p.penalty) * (G.seriesHit ? SERIES_SHARE : 1) * (DIFF_MULT[G.diff] || 1)); const pl = G.players[who];
         pl.score += pts; pl.nailed += 1; if (G.stage === 0) pl.first += 1; if (G.stage === 3) pl.last += 1;
         pl.fastest = Math.min(pl.fastest, (G.whoAt || performance.now()) - G.filmStart);
         G.credit = who;
@@ -1363,7 +1379,7 @@
       updateHud(); showReveal({ won: won && who >= 0, reason: won && who < 0 ? "nobody" : reason, pts, p, m: 1 }); return;
     }
     if (won) {
-      pts = Math.round(Math.max(0, p.base + p.bonus - p.penalty) * m * (G.seriesHit ? SERIES_SHARE : 1));
+      pts = Math.round(Math.max(0, p.base + p.bonus - p.penalty) * m * (G.seriesHit ? SERIES_SHARE : 1) * (DIFF_MULT[G.diff] || 1));
       G.score += pts; G.streak += 1; G.runBest = Math.max(G.runBest, G.streak); G.nailed.push(G.movie);
       badge = STREAK_BADGES[G.streak] || null;
     } else if (reason === "skipped") {
@@ -1405,7 +1421,8 @@
 
     if (won && G.mode !== "practice") {
       $("#revBreak").hidden = false;
-      const last = G.mode === "party" ? [esc(G.players[G.credit].name), "Point to"] : [`×${m.toFixed(1)}`, "Streak"];
+      const dm = DIFF_MULT[G.diff] || 1;
+      const last = G.mode === "party" ? [esc(G.players[G.credit].name), dm !== 1 ? `Point to · ×${dm}` : "Point to"] : [`×${(m * dm).toFixed(1)}`, dm !== 1 ? "Streak × super easy" : "Streak"];
       const third = G.seriesHit && !p.penalty ? [`×${SERIES_SHARE}`, "Series"] : [p.penalty ? `−${p.penalty}` : "0", `${G.wrong} miss${G.wrong === 1 ? "" : "es"}`, p.penalty ? "var(--coral)" : ""];
       $("#revBreak").innerHTML = [[p.base, `${roman(G.stage)} clue`], [`+${p.bonus}`, "Speed"], third, last]
         .map(([v, l, c]) => `<div><b style="${c ? `color:${c}` : ""}">${v}</b><small>${l}</small></div>`).join("");
