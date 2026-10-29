@@ -9,6 +9,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    // Anonymous play counts (GoatCounter: no cookies, no personal data). Only on the live site, never on localhost.
+    if (/\.github\.io$/.test(location.hostname)) {
+      const gc = document.createElement("script"); gc.async = true; gc.src = "https://gc.zgo.at/count.js";
+      gc.dataset.goatcounter = "https://shyam3101.goatcounter.com/count"; document.head.appendChild(gc);
+    }
+  </script>
   <style>
     :root {
       --bg: #0C1428; --s1: #131D38; --s2: #1B2745; --b1: #2A3654; --b2: #3A4766;
@@ -542,7 +549,7 @@
     </div>
     <button class="btn ghost wide" id="resetSeen">Reset seen films</button>
     <button class="btn ghost wide" id="replayTutorial">Replay the tutorial</button>
-    <p class="credit">Film data and images from The Movie Database (TMDB). This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+    <p class="credit">Film data and images from The Movie Database (TMDB). This product uses the TMDB API but is not endorsed or certified by TMDB.<br><br>We count anonymous plays to improve the game. No cookies, no personal data.</p>
   </section>
 </div>
 
@@ -610,7 +617,7 @@
 <canvas id="confetti" hidden></canvas>
 <div class="toast" id="toast" hidden role="status"></div>
 
-<script src="movies.js?v=3.8"></script>
+<script src="movies.js?v=3.9"></script>
 <script>
 (() => {
   "use strict";
@@ -737,6 +744,23 @@
     const base = s => s.replace(/\b(part|chapter|vol|volume|returns|rises|reloaded|revolutions)\b.*$/, "").replace(/\b(\d+|ii|iii|iv|v|vi)\b/g, "").replace(/\s+/g, " ").trim();
     return answers(m).some(t => (base(g).length >= 3 && base(g) === base(t)) || t.startsWith(g + " ") || g.startsWith(t + " "));
   }
+
+  // ================= anonymous analytics =================
+  const IS_LIVE = /\.github\.io$/.test(location.hostname);
+  const trackQueue = [];
+  function track(name, title) {
+    if (!IS_LIVE) return;   // harmless no-op when testing locally
+    trackQueue.push([name, title]); flushTrack();
+  }
+  function flushTrack(tries = 0) {
+    const gc = window.goatcounter;
+    if (gc && typeof gc.count === "function") {
+      while (trackQueue.length) { const [n, t] = trackQueue.shift(); try { gc.count({ path: "event/" + n, title: t || n, event: true }); } catch { /* ignore */ } }
+      return;
+    }
+    if (tries < 10) setTimeout(() => flushTrack(tries + 1), 1000);
+  }
+  const filmsBucket = n => n >= 20 ? "20plus" : n >= 10 ? "10-19" : n >= 5 ? "5-9" : "1-4";
 
   // ================= sound (WebAudio synth) =================
   const sfx = (() => {
@@ -938,6 +962,7 @@
   const ob = { industries: ["hollywood", "bollywood"], level: "medium" };
   function suggestNick() { return `${NICKS[Math.floor(Math.random() * NICKS.length)]} ${Math.floor(Math.random() * 90 + 10)}`; }
   function finishOnboarding(practice) {
+    track("onboarding_done");
     DB.prefs.industries = ob.industries.length ? ob.industries : ["hollywood", "bollywood"];
     DB.prefs.difficulty = ob.level;
     DB.prefs.nickname = ($("#nickInput").value || "").trim() || DB.prefs.nickname || suggestNick();
@@ -1056,6 +1081,7 @@
     if (on && !VOICE_OK) { toast(voiceUnsupportedText(), 3600); return; }
     if (on && !DB.prefs.voiceNoted) { $("#voiceSheet").hidden = false; return; }
     DB.prefs.voice = on; save(); syncVoiceUI(); syncVoice();
+    if (on) track("voice_on");
   }
   $("#voiceOk").addEventListener("click", () => { DB.prefs.voiceNoted = true; $("#voiceSheet").hidden = true; setVoice(true); });
   $("#voiceSheet").addEventListener("click", e => { if (e.target.id === "voiceSheet" || e.target.closest("[data-close]")) $("#voiceSheet").hidden = true; });
@@ -1143,6 +1169,12 @@
     }
     Object.assign(G, { mode, deck, score: 0, lives: LIVES, streak: 0, runBest: 0, nailed: [], missed: [], skipped: [], skipsLeft: MAX_SKIPS, filmNo: 0, results: [], movie: null,
       stageMs: (mode === "daily" ? DAILY_SEC : DB.prefs.stageSec) * 1000 });
+    if (mode === "solo" || mode === "party") {
+      track(mode === "solo" ? "game_start_solo" : "game_start_party");
+      if (mode === "party") track(`party_${G.players.length}`);
+      track(`difficulty_${DB.prefs.difficulty}`);
+      track(`industry_${DB.prefs.industries.length > 1 ? "both" : DB.prefs.industries[0]}`);
+    } else if (mode === "daily") track("daily_start");
     show("gameScreen"); startRound();
   }
 
@@ -1403,6 +1435,9 @@
     const p = G.frozenP || points(), m = G.mode === "party" ? 1 : mult();
     let pts = 0, badge = null, lostStar = false;
     if (G.mode === "practice") { showReveal({ won, reason, pts: 0, p, m: 1 }); return; }
+    if (reason === "skipped") track("film_skipped");
+    else if (won) { track(`film_guessed_stage_${G.stage + 1}`); if (G.seriesHit) track("film_series_match"); }
+    else track("film_missed");
     if (G.mode === "party") {
       const who = G.cur >= 0 ? G.cur : G.credit;
       if (won && who >= 0) {
@@ -1545,6 +1580,7 @@
     const title = `Bad clue: ${m.title} (${m.year ?? "?"}) – ${reportReason}`;
     const body = [`**Film:** ${m.title} (${m.year ?? "?"}), TMDB id ${m.id}`, `**Problem:** ${reportReason}`, note ? `**Note:** ${note}` : "", `**Ended at clue:** ${G.stage + 1} of 4`, `**Actors shown:** ${cast}`, `**Mode / difficulty:** ${G.mode} / ${G.diff}`, `**App version:** ${APP_VERSION}`, `https://www.themoviedb.org/movie/${m.id}`].filter(Boolean).join("\n");
     window.open(`https://github.com/shyam310195/castguess/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=bad-clue`, "_blank", "noopener");
+    track("report_problem");
     $("#reportSheet").hidden = true; toast("Thanks, reported. It helps fix the film list.");
   });
 
@@ -1562,6 +1598,7 @@
     G.prevRanks = Object.fromEntries(r.map((pl, k) => [pl.i, k]));
   }
   function showPodium() {
+    track(`game_over_films_${filmsBucket(G.filmNo)}`);
     const r = ranked(), top = r[0];
     const tie = r.length > 1 && r[1].score === top.score;
     $("#podTitle").textContent = top.score === 0 ? "Nobody… yet" : tie ? "It's a tie!" : top.name;
@@ -1585,6 +1622,7 @@
 
   // ================= game over =================
   function shareText(text) {
+    track("share_clicked");
     if (navigator.share) { navigator.share({ text }).catch(() => {}); return; }
     copyText(text);
   }
@@ -1598,6 +1636,7 @@
     try { document.execCommand("copy"); done(); } catch { toast("Couldn't copy. Select the text and copy it yourself."); } ta.remove();
   }
   function gameOver() {
+    track(`game_over_films_${filmsBucket(G.filmNo)}`);
     const prev = DB.records.best, isBest = G.score > prev;
     if (isBest) DB.records.best = G.score;
     if (G.runBest > DB.records.bestStreak) DB.records.bestStreak = G.runBest; save();
@@ -1619,6 +1658,7 @@
   // ================= daily =================
   const SQ = ["⬛", "🟨", "🟧", "🟫", "🟥"];
   function finishDaily() {
+    track("daily_done");
     const score = G.results.reduce((a, r) => a + r.pts, 0);
     DB.daily[todayKey()] = { n: dailyNumber(), results: G.results, score }; save(); showDailyResult();
     if (G.results.filter(r => r.won).length >= 4) { confetti(150); winSound(3); } else winSound(1);
@@ -1638,7 +1678,7 @@
     show("dailyScreen");
   }
   $("#dailyShareBtn").addEventListener("click", () => { const d = DB.daily[todayKey()]; if (d) shareText(dailyShareText(d)); });
-  $("#dailyCopyBtn").addEventListener("click", () => { const d = DB.daily[todayKey()]; if (d) copyText(dailyShareText(d)); });
+  $("#dailyCopyBtn").addEventListener("click", () => { track("share_clicked"); const d = DB.daily[todayKey()]; if (d) copyText(dailyShareText(d)); });
 
   // ================= stats =================
   function showStats() {
@@ -1679,6 +1719,8 @@
   // ================= boot =================
   applyMotion();
   if (!ALL.length) { document.body.innerHTML = '<p style="padding:24px;line-height:1.6">No film data found. The app needs <b>movies.js</b> in the same folder as index.html (app_v3). If it is there, reload with Cmd + Shift + R to clear the old copy.</p>'; return; }
+  // once-a-day "returning player" ping
+  try { const today = todayKey(), last = localStorage.getItem("castguess.v3.lastVisit"); if (DB.prefs.onboarded && last && last !== today) track("return_visit"); localStorage.setItem("castguess.v3.lastVisit", today); } catch { /* ignore */ }
   DB.prefs.onboarded ? goHome() : startOnboarding();
 })();
 </script>
