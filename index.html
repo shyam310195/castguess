@@ -273,6 +273,8 @@
     .heard.live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); animation: pulse 1s ease infinite; }
     .heard button { background: none; border: 1px solid var(--gold); color: var(--gold); border-radius: 999px; padding: 8px 14px; font-weight: 600; font-size: 13px; min-height: 36px; }
     .who-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    #reportReasons button { min-height: 48px; font-size: 15px; font-weight: 600; justify-content: flex-start; padding: 8px 16px; }
+    #reportReasons button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
     .who-list button { min-height: 64px; border-radius: 16px; border: 1.5px solid var(--b2); background: var(--s2); color: var(--text); font-weight: 700; font-size: 17px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 8px; }
     .board { width: 100%; display: flex; flex-direction: column; gap: 6px; text-align: left; }
     .board .bro { display: grid; grid-template-columns: 22px 14px 1fr auto 44px; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; background: var(--s1); font-size: 14px; animation: fade 300ms ease both; }
@@ -447,6 +449,7 @@
     <div class="board" id="revBoard" hidden></div>
     <div class="stars" id="revLives" role="img" style="justify-content:center"></div>
     <div class="starring" id="revStarring"></div>
+    <button class="stay" id="reportBtn" style="font-size:12px">Report a problem with this film</button>
     <div class="rev-cta">
       <button class="btn primary wide big" id="revNext"><span class="fillbar" aria-hidden="true"></span><span class="lbl" id="revNextLbl">Next film</span></button>
       <button class="stay" id="revStay" hidden>Stay on this film</button>
@@ -537,6 +540,7 @@
         <div class="muted" id="voiceSupport" style="font-size:12px"></div></div>
       <div class="toggle-row"><span id="lblRm">Reduce motion</span><button class="switch" role="switch" id="swRm" aria-labelledby="lblRm"></button></div>
     </div>
+    <button class="btn ghost wide" id="resetSeen">Reset seen films</button>
     <button class="btn ghost wide" id="replayTutorial">Replay the tutorial</button>
     <p class="credit">Film data and images from The Movie Database (TMDB). This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
   </section>
@@ -575,6 +579,24 @@
     <button class="btn text" id="whoNobody">Nobody, it was misheard. Keep playing</button>
   </div>
 </div>
+<div class="sheet-bg" id="reportSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="reportTitle">
+    <h2 class="title" id="reportTitle" style="font-size:24px">What's wrong?</h2>
+    <div class="muted" id="reportFilm" style="font-size:14px"></div>
+    <div class="who-list" id="reportReasons" style="grid-template-columns:1fr">
+      <button data-reason="Wrong photo">Wrong photo</button>
+      <button data-reason="Wrong actor name">Wrong actor name</button>
+      <button data-reason="Plot gives it away / bad plot">Plot gives it away / bad plot</button>
+      <button data-reason="Wrong title or year">Wrong title or year</button>
+      <button data-reason="Other">Something else</button>
+    </div>
+    <label class="label" for="reportNote">Note (optional)</label>
+    <input id="reportNote" class="text-input" maxlength="200" placeholder="e.g. the 2nd photo is a different actor" autocomplete="off" />
+    <button class="btn primary wide" id="reportSend" disabled>Send report</button>
+    <p class="muted" style="margin:0;font-size:12px;line-height:1.5">Opens a pre-filled report on GitHub in a new tab (you'll need a free GitHub account to submit it). It's also saved on this device.</p>
+    <button class="btn text wide" data-close>Cancel</button>
+  </div>
+</div>
 <div class="sheet-bg" id="voiceSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="voiceTitle">
     <h2 class="title" id="voiceTitle" style="font-size:26px">Hands-free voice</h2>
@@ -588,7 +610,7 @@
 <canvas id="confetti" hidden></canvas>
 <div class="toast" id="toast" hidden role="status"></div>
 
-<script src="movies.js?v=3.7"></script>
+<script src="movies.js?v=3.8"></script>
 <script>
 (() => {
   "use strict";
@@ -1092,6 +1114,18 @@
     setHeard(`Heard: “${alts[0]}” · not it`, true);
   }
 
+  // ================= seen films (no repeats on this device) =================
+  const SEEN_KEY = "castguess.v3.seen";
+  function seenMap() { try { return JSON.parse(localStorage.getItem(SEEN_KEY) || "{}"); } catch { return {}; } }
+  function markSeen(id) { const s = seenMap(); s[id] = Date.now(); try { localStorage.setItem(SEEN_KEY, JSON.stringify(s)); } catch { /* ignore */ } }
+  // Unseen films first. Seen films only come back once ~80% of this pool is used up, oldest-seen first.
+  function freshDeck(p) {
+    const seen = seenMap(), unseen = p.filter(m => !seen[m.id]);
+    const deck = spreadSeries(shuffle(unseen));
+    if (unseen.length >= p.length * 0.2) return deck;
+    return deck.concat(p.filter(m => seen[m.id]).sort((a, b) => seen[a.id] - seen[b.id]));
+  }
+
   // ================= game state =================
   const G = { mode: "solo", deck: [], movie: null, lineup: null, diff: "medium", stage: 0, stageStart: 0, wrong: 0, tried: [], over: true, raf: 0, token: 0,
     paused: false, pausedAt: 0, lastSec: null, score: 0, lives: LIVES, streak: 0, runBest: 0, nailed: [], missed: [], filmNo: 0, results: [], coachStep: 0, giveUpArmed: false, stageMs: 15000, skipsLeft: MAX_SKIPS, skipped: [], autoNext: 0,
@@ -1101,7 +1135,7 @@
     let deck;
     if (mode === "daily") deck = dailyFilms();
     else if (mode === "practice") deck = [practiceFilm()];
-    else { const p = pool(); if (!p.length) { toast("No films match your filters."); return; } deck = spreadSeries(shuffle(p)); }
+    else { const p = pool(); if (!p.length) { toast("No films match your filters."); return; } deck = freshDeck(p); }
     if (mode === "party") {
       const pp = DB.prefs.party;
       G.players = partyNames().map((name, i) => ({ name, color: PCOLORS[i], score: 0, nailed: 0, first: 0, last: 0, fastest: Infinity }));
@@ -1128,8 +1162,9 @@
 
   async function startRound() {
     const token = ++G.token;
-    if ((G.mode === "solo" || G.mode === "party") && !G.deck.length) { G.deck = spreadSeries(shuffle(pool())); if (G.movie && G.deck.length > 1 && G.deck[0].id === G.movie.id) G.deck.push(G.deck.shift()); }
+    if ((G.mode === "solo" || G.mode === "party") && !G.deck.length) { G.deck = freshDeck(pool()); if (G.movie && G.deck.length > 1 && G.deck[0].id === G.movie.id) G.deck.push(G.deck.shift()); }
     G.movie = G.deck.shift(); G.filmNo += 1;
+    if (G.mode === "solo" || G.mode === "party") markSeen(G.movie.id);
     const rng = G.mode === "daily" ? mulberry32(hash(todayKey() + G.movie.id)) : Math.random;
     G.diff = G.mode === "practice" ? "easy" : G.mode === "daily" ? "medium" : DB.prefs.difficulty === "mixed" ? ["easy", "medium", "hard"][Math.floor(Math.random() * 3)] : DB.prefs.difficulty;
     G.lineup = pickLineup(G.movie, G.diff, rng);
@@ -1488,6 +1523,31 @@
     show("gameScreen"); startRound();
   });
 
+  // ================= report a problem =================
+  const REPORT_KEY = "castguess.v3.reports", APP_VERSION = "3.8";
+  let reportReason = "";
+  $("#reportBtn").addEventListener("click", () => {
+    stopAuto(); G.autoResume = false; reportReason = "";
+    $("#reportFilm").textContent = `${G.movie.title} (${G.movie.year ?? ""})`;
+    $$("#reportReasons button").forEach(b => b.setAttribute("aria-pressed", "false"));
+    $("#reportNote").value = ""; $("#reportSend").disabled = true; $("#reportSheet").hidden = false;
+  });
+  $("#reportReasons").addEventListener("click", e => {
+    const b = e.target.closest("button[data-reason]"); if (!b) return;
+    reportReason = b.dataset.reason; $$("#reportReasons button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); $("#reportSend").disabled = false;
+  });
+  $("#reportSheet").addEventListener("click", e => { if (e.target.id === "reportSheet" || e.target.closest("[data-close]")) $("#reportSheet").hidden = true; });
+  $("#reportSend").addEventListener("click", () => {
+    const m = G.movie, note = $("#reportNote").value.trim();
+    const cast = G.lineup ? [...G.lineup.initial, G.lineup.extra].filter(Boolean).map(c => `${c.name} (#${c.order})`).join(", ") : "";
+    const report = { id: m.id, title: m.title, year: m.year, reason: reportReason, note, clue: G.stage + 1, mode: G.mode, difficulty: G.diff, at: new Date().toISOString(), v: APP_VERSION };
+    try { const list = JSON.parse(localStorage.getItem(REPORT_KEY) || "[]"); list.push(report); localStorage.setItem(REPORT_KEY, JSON.stringify(list.slice(-200))); } catch { /* ignore */ }
+    const title = `Bad clue: ${m.title} (${m.year ?? "?"}) – ${reportReason}`;
+    const body = [`**Film:** ${m.title} (${m.year ?? "?"}), TMDB id ${m.id}`, `**Problem:** ${reportReason}`, note ? `**Note:** ${note}` : "", `**Ended at clue:** ${G.stage + 1} of 4`, `**Actors shown:** ${cast}`, `**Mode / difficulty:** ${G.mode} / ${G.diff}`, `**App version:** ${APP_VERSION}`, `https://www.themoviedb.org/movie/${m.id}`].filter(Boolean).join("\n");
+    window.open(`https://github.com/shyam310195/castguess/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=bad-clue`, "_blank", "noopener");
+    $("#reportSheet").hidden = true; toast("Thanks, reported. It helps fix the film list.");
+  });
+
   // ================= party scoreboard & podium =================
   function ranked() { return G.players.map((pl, i) => ({ ...pl, i })).sort((a, b) => b.score - a.score || b.nailed - a.nailed); }
   function renderBoard() {
@@ -1599,6 +1659,7 @@
   // ================= settings =================
   function syncSwitches() { $("#swAuto").setAttribute("aria-checked", String(DB.prefs.autoNext !== false)); $("#swSound").setAttribute("aria-checked", String(DB.prefs.sound)); $("#swVib").setAttribute("aria-checked", String(DB.prefs.vibrate)); $("#swRm").setAttribute("aria-checked", String(DB.prefs.reduceMotion)); }
   function showSettings() {
+    syncSeenBtn();
     setPressed("#setIndustries", "ind", DB.prefs.industries);
     $$("#setDiff button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === DB.prefs.difficulty)));
     $$("#setTime button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.v === DB.prefs.stageSec)));
@@ -1609,6 +1670,11 @@
   $("#swAuto").addEventListener("click", () => { DB.prefs.autoNext = DB.prefs.autoNext === false; save(); syncSwitches(); });
   [["#swSound", "sound"], ["#swVib", "vibrate"], ["#swRm", "reduceMotion"]].forEach(([id, k]) => $(id).addEventListener("click", () => { DB.prefs[k] = !DB.prefs[k]; save(); syncSwitches(); applyMotion(); if (k === "sound" && DB.prefs.sound) sfx.chime(); if (k === "vibrate") buzz(40); }));
   $("#replayTutorial").addEventListener("click", startOnboarding);
+  function syncSeenBtn() { const n = Object.keys(seenMap()).length; $("#resetSeen").textContent = n ? `Reset seen films (${n} seen)` : "Reset seen films (none yet)"; $("#resetSeen").disabled = !n; }
+  $("#resetSeen").addEventListener("click", e => {
+    if (!e.target.dataset.armed) { e.target.dataset.armed = "1"; e.target.textContent = "Tap again to reset"; setTimeout(() => { delete e.target.dataset.armed; syncSeenBtn(); }, 3000); return; }
+    delete e.target.dataset.armed; try { localStorage.removeItem(SEEN_KEY); } catch { /* ignore */ } syncSeenBtn(); toast("Seen films reset. Every film is fresh again.");
+  });
 
   // ================= boot =================
   applyMotion();
