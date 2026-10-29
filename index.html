@@ -583,12 +583,18 @@
 <canvas id="confetti" hidden></canvas>
 <div class="toast" id="toast" hidden role="status"></div>
 
-<script src="movies.js?v=3.3"></script>
+<script src="movies.js?v=3.4"></script>
 <script>
 (() => {
   "use strict";
   // ================= data =================
-  const ALL = (window.MOVIES || []).filter(m => m.cast && m.cast.length >= 4).map(m => m.industry ? m : { ...m, industry: "bollywood" });
+  const IMG = window.IMG_BASE || "";
+  const fullImg = (path, size) => !path ? "" : /^https?:/.test(path) ? path : IMG + size + path;
+  // movies.js stores cast as [name, billing order, photo path] to keep the file small
+  const ALL = (window.MOVIES || []).map(m => ({
+    ...m, industry: m.industry || "bollywood", pop: m.pop ?? 1, poster: fullImg(m.poster, "w500"),
+    cast: (m.cast || []).map(c => Array.isArray(c) ? { name: c[0], order: c[1], photo: fullImg(c[2], "h632") } : { ...c, photo: fullImg(c.photo, "h632") }),
+  })).filter(m => m.cast.length >= 4);
   const TITLES = (() => {
     const map = new Map();
     (window.TITLE_LIST || []).forEach(([t, y]) => map.set(`${t.toLowerCase()}|${y}`, { title: t, year: y }));
@@ -795,7 +801,13 @@
 
   // ================= film pools =================
   function yearOk(m) { const y = m.year || 0, f = DB.prefs.yearFrom, t = DB.prefs.yearTo; return (f == null || y >= f) && (t == null || y <= t); }
-  function pool() { return ALL.filter(m => DB.prefs.industries.includes(m.industry) && yearOk(m)); }
+  const POP_MIN = { easy: 0.55, medium: 0.25 };   // share of each industry's least-known films kept out
+  function pool() {
+    const base = ALL.filter(m => DB.prefs.industries.includes(m.industry) && yearOk(m));
+    const min = POP_MIN[DB.prefs.difficulty] || 0;
+    const famous = base.filter(m => m.pop >= min);
+    return famous.length >= 30 || famous.length === base.length ? famous : base;   // small selections keep everything
+  }
   function yearsText() { const f = DB.prefs.yearFrom, t = DB.prefs.yearTo; return f == null && t == null ? "All" : f == null ? `Up to ${t}` : t == null ? `${f} onwards` : `${f}–${t}`; }
 
   // ----- year range panel (Home + Settings share this) -----
@@ -828,7 +840,7 @@
   }
   function todayKey() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
   function dailyNumber() { const d = new Date(); return Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(2026, 9, 29)) / 864e5) + 1; }
-  function dailyFilms() { const rng = mulberry32(hash("daily-" + todayKey())); return shuffle([...ALL].sort((a, b) => a.id - b.id), rng).slice(0, DAILY_COUNT); }
+  function dailyFilms() { const rng = mulberry32(hash("daily-" + todayKey())); return shuffle(ALL.filter(m => m.pop >= 0.4).sort((a, b) => a.id - b.id), rng).slice(0, DAILY_COUNT); }
   function practiceFilm() {
     const prefer = DB.prefs.industries.includes("hollywood") ? ["Titanic", "Dilwale Dulhania Le Jayenge"] : ["Dilwale Dulhania Le Jayenge", "3 Idiots"];
     for (const t of prefer) { const m = ALL.find(x => x.title === t); if (m) return m; }
@@ -909,7 +921,7 @@
   function bindSeg(sel, key, after) {
     $$(`${sel} button`).forEach(b => b.addEventListener("click", () => { DB.prefs[key] = b.dataset.v; save(); $$(`${sel} button`).forEach(x => x.setAttribute("aria-pressed", String(x === b))); after && after(); }));
   }
-  bindSeg("#homeDiff", "difficulty"); bindSeg("#setDiff", "difficulty");
+  bindSeg("#homeDiff", "difficulty", updateYearUI); bindSeg("#setDiff", "difficulty", updateYearUI);
   $$("#homeTime button, #setTime button").forEach(b => b.addEventListener("click", () => {
     DB.prefs.stageSec = +b.dataset.v; save();
     $$("#homeTime button, #setTime button").forEach(x => x.setAttribute("aria-pressed", String(+x.dataset.v === DB.prefs.stageSec)));
