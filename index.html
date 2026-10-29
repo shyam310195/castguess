@@ -583,7 +583,7 @@
 <canvas id="confetti" hidden></canvas>
 <div class="toast" id="toast" hidden role="status"></div>
 
-<script src="movies.js?v=3.5"></script>
+<script src="movies.js?v=3.6"></script>
 <script>
 (() => {
   "use strict";
@@ -595,10 +595,17 @@
     ...m, industry: m.industry || "bollywood", pop: m.pop ?? 1, poster: fullImg(m.poster, "w500"),
     cast: (m.cast || []).map(c => Array.isArray(c) ? { name: c[0], order: c[1], photo: fullImg(c[2], "h632") } : { ...c, photo: fullImg(c.photo, "h632") }),
   })).filter(m => m.cast.length >= 4);
+  // ---- series (same cast across instalments) ----
+  const SERIES = window.SERIES || {};
+  const compact = v => normalize(v).replace(/\s/g, "");
+  Object.values(SERIES).forEach(sr => { sr.keys = [...new Set([sr.n, ...(sr.a || [])].map(compact).filter(Boolean))]; });
+  const TITLE_INDEX = new Map();
+  ALL.forEach(m => [m.title, ...(m.aliases || [])].forEach(t => { const k = compact(t); if (k && !TITLE_INDEX.has(k)) TITLE_INDEX.set(k, m); }));
   const TITLES = (() => {
     const map = new Map();
     (window.TITLE_LIST || []).forEach(([t, y]) => map.set(`${t.toLowerCase()}|${y}`, { title: t, year: y }));
     ALL.forEach(m => map.set(`${m.title.toLowerCase()}|${m.year}`, { title: m.title, year: m.year }));
+    Object.values(SERIES).forEach(sr => { if ((sr.c || 0) >= 2) map.set(`${sr.n.toLowerCase()}|series`, { title: sr.n, year: null, series: true }); });
     return [...map.values()];
   })();
   const INDUSTRY_NAME = { hollywood: "Hollywood", bollywood: "Bollywood" };
@@ -610,6 +617,7 @@
     { n: "Act III", name: "The names", base: 50, hint: "Now you know who they are." },
     { n: "Act IV", name: "The plot", base: 25, hint: "Last act. Read the synopsis." },
   ];
+  const SERIES_SHARE = 0.75;   // a right-series guess earns 75% of the points
   const MAX_WRONG = 3, PENALTY = 10, LIVES = 3, DAILY_COUNT = 5, MAX_SKIPS = 3, MIN_POOL = 10, DAILY_SEC = 15;
   const YEAR_MIN = Math.min(...ALL.map(m => m.year || 9999)), YEAR_MAX = new Date().getFullYear();
   const PRESETS = [["All years", null, null], ["2000+", 2000, null], ["1990+", 1990, null], ["1970–1999", 1970, 1999], ["Before 1970", null, 1969]];
@@ -672,6 +680,21 @@
   function matches(value, m) {
     const g = normalize(value).replace(/\s/g, ""); if (!g) return false;
     return answers(m).some(c => { const t = c.replace(/\s/g, ""); if (g === t) return true; if (g.replace(/\D/g, "") !== t.replace(/\D/g, "")) return false; /* sequel numbers are never typos */ const max = Math.max(g.length, t.length); return max > 4 && lev(g, t) <= (max >= 15 ? 2 : 1); });
+  }
+  // A different film from the same series, or the series name itself ("Harry Potter", "Dhoom")
+  function seriesMatch(value, m) {
+    const sr = m.s && SERIES[m.s]; if (!sr) return false;
+    const gc = compact(value); if (gc.length < 2) return false;
+    if (sr.keys.some(k => gc === k || (k.length >= 6 && lev(gc, k) <= 1))) return true;
+    const other = TITLE_INDEX.get(gc); if (other && other.s === m.s) return true;
+    return sr.keys.some(k => k.length >= 5 && gc.includes(k));
+  }
+  // A film from the same shared universe but a different series (e.g. Iron Man for an Avengers film)
+  function universeMatch(value, m) {
+    if (!m.u) return false;
+    const gc = compact(value); if (gc.length < 3) return false;
+    const other = TITLE_INDEX.get(gc); if (other && other.u === m.u && other.id !== m.id) return true;
+    return Object.values(SERIES).some(sr => sr.u === m.u && sr.keys.some(k => k.length >= 5 && gc.includes(k)));
   }
   function nearMiss(value, m) {
     const g = normalize(value); if (g.length < 3) return false;
@@ -840,7 +863,17 @@
   }
   function todayKey() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
   function dailyNumber() { const d = new Date(); return Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(2026, 9, 29)) / 864e5) + 1; }
-  function dailyFilms() { const rng = mulberry32(hash("daily-" + todayKey())); return shuffle(ALL.filter(m => m.pop >= 0.4).sort((a, b) => a.id - b.id), rng).slice(0, DAILY_COUNT); }
+  // keep films from the same series at least `gap` films apart
+  function spreadSeries(list, gap = 15) {
+    const out = [], waiting = [...list];
+    while (waiting.length) {
+      const recent = new Set(out.slice(-gap).map(m => m.s).filter(Boolean));
+      const i = waiting.findIndex(m => !m.s || !recent.has(m.s));
+      out.push(waiting.splice(i < 0 ? 0 : i, 1)[0]);
+    }
+    return out;
+  }
+  function dailyFilms() { const rng = mulberry32(hash("daily-" + todayKey())); const seen = new Set(); return shuffle(ALL.filter(m => m.pop >= 0.4).sort((a, b) => a.id - b.id), rng).filter(m => !m.s || (!seen.has(m.s) && seen.add(m.s))).slice(0, DAILY_COUNT); }
   function practiceFilm() {
     const prefer = DB.prefs.industries.includes("hollywood") ? ["Titanic", "Dilwale Dulhania Le Jayenge"] : ["Dilwale Dulhania Le Jayenge", "3 Idiots"];
     for (const t of prefer) { const m = ALL.find(x => x.title === t); if (m) return m; }
@@ -1035,6 +1068,7 @@
     if (onReveal()) { if (final && /\b(next|next film|next one|go|continue|keep going|carry on)\b/.test(cleanSpoken(alts[0]))) $("#revNext").click(); return; }
     if (G.over || G.whoPending) return;
     for (const a of alts) { const c = cleanSpoken(a); if (matches(a, G.movie) || (c && matches(c, G.movie))) { feedback(`Heard “${a}”`, "near"); correctGuess(); return; } }
+    for (const a of alts) { const c = cleanSpoken(a); if (seriesMatch(a, G.movie) || (c && seriesMatch(c, G.movie))) { feedback(`Heard “${a}” · right series`, "near"); correctGuess(true); return; } }
     if (!final) return;
     const n = cleanSpoken(alts[0]);
     if (/\b(next clue|next act|another clue|more clues?)\b/.test(n)) { if (G.stage < 3) { advance(); toast("Next clue"); } return; }
@@ -1051,7 +1085,7 @@
     let deck;
     if (mode === "daily") deck = dailyFilms();
     else if (mode === "practice") deck = [practiceFilm()];
-    else { const p = pool(); if (!p.length) { toast("No films match your filters."); return; } deck = shuffle(p); }
+    else { const p = pool(); if (!p.length) { toast("No films match your filters."); return; } deck = spreadSeries(shuffle(p)); }
     if (mode === "party") {
       const pp = DB.prefs.party;
       G.players = partyNames().map((name, i) => ({ name, color: PCOLORS[i], score: 0, nailed: 0, first: 0, last: 0, fastest: Infinity }));
@@ -1078,12 +1112,12 @@
 
   async function startRound() {
     const token = ++G.token;
-    if ((G.mode === "solo" || G.mode === "party") && !G.deck.length) { G.deck = shuffle(pool()); if (G.movie && G.deck.length > 1 && G.deck[0].id === G.movie.id) G.deck.push(G.deck.shift()); }
+    if ((G.mode === "solo" || G.mode === "party") && !G.deck.length) { G.deck = spreadSeries(shuffle(pool())); if (G.movie && G.deck.length > 1 && G.deck[0].id === G.movie.id) G.deck.push(G.deck.shift()); }
     G.movie = G.deck.shift(); G.filmNo += 1;
     const rng = G.mode === "daily" ? mulberry32(hash(todayKey() + G.movie.id)) : Math.random;
     G.diff = G.mode === "practice" ? "easy" : G.mode === "daily" ? "medium" : DB.prefs.difficulty === "mixed" ? ["easy", "medium", "hard"][Math.floor(Math.random() * 3)] : DB.prefs.difficulty;
     G.lineup = pickLineup(G.movie, G.diff, rng);
-    Object.assign(G, { stage: 0, wrong: 0, tried: [], over: true, paused: false, lastSec: null, giveUpArmed: false, credit: -1, whoPending: null, frozenP: null, whoAt: 0 });
+    Object.assign(G, { stage: 0, wrong: 0, tried: [], over: true, paused: false, lastSec: null, giveUpArmed: false, credit: -1, whoPending: null, frozenP: null, whoAt: 0, seriesHit: false });
     G.cur = G.mode === "party" && G.pstyle === "turns" ? (G.filmNo - 1) % G.players.length : -1;
     voiceStop();
 
@@ -1220,6 +1254,8 @@
       if (year && G.movie.year && Math.abs(year - G.movie.year) > 1) { soClose("So close! Right title, different year."); return; }
       correctGuess(); return;
     }
+    if (seriesMatch(text, G.movie)) { correctGuess(true); return; }
+    if (universeMatch(text, G.movie)) { soClose("So close! Right universe, different series. Think again."); return; }
     if (nearMiss(text, G.movie)) { soClose("So close! It's a related film. Think again."); return; }
     G.wrong += 1; G.tried.push(text); renderTried();
     const inp = $("#guessInput"); inp.value = ""; inp.classList.remove("shake"); void inp.offsetWidth; inp.classList.add("shake");
@@ -1229,8 +1265,9 @@
     if (G.wrong >= MAX_WRONG) { endRound(false, "guesses"); return; }
     feedback(`Not it. ${MAX_WRONG - G.wrong} guess${MAX_WRONG - G.wrong === 1 ? "" : "es"} left.`, "bad"); updateHintLine(); $("#worthNum").textContent = worth();
   }
-  function correctGuess() {
+  function correctGuess(series = false) {
     if (G.over || G.whoPending) return;
+    G.seriesHit = !!series;
     if (G.mode === "party" && G.pstyle === "shout") { askWho(); return; }
     endRound(true);
   }
@@ -1239,7 +1276,7 @@
     G.whoPending = { at: now }; G.frozenP = points(now); cancelAnimationFrame(G.raf); voiceStop(); hideSugg();
     sfx.near(); buzz(40);
     $("#whoKicker").textContent = `Correct! It's ${G.movie.title}`;
-    $("#whoPts").textContent = `Worth ${Math.max(0, G.frozenP.base + G.frozenP.bonus - G.frozenP.penalty)} points`;
+    $("#whoPts").textContent = `Worth ${Math.round(Math.max(0, G.frozenP.base + G.frozenP.bonus - G.frozenP.penalty) * (G.seriesHit ? SERIES_SHARE : 1))} points${G.seriesHit ? " · right series" : ""}`;
     $("#whoList").innerHTML = G.players.map((pl, i) => `<button data-who="${i}"><span class="dot" style="background:${pl.color}" aria-hidden="true"></span>${esc(pl.name)}</button>`).join("");
     $("#whoSheet").hidden = false;
   }
@@ -1259,7 +1296,7 @@
     for (const t of TITLES) { const n = normalize(t.title); const i = n.indexOf(q); if (i < 0) continue; out.push([i === 0 ? 0 : n.includes(" " + q) ? 1 : 2, t]); }
     out.sort((a, b) => a[0] - b[0] || a[1].title.localeCompare(b[1].title));
     const list = out.slice(0, 5).map(x => x[1]); if (!list.length) { hideSugg(); return; }
-    $("#sugg").innerHTML = list.map(t => `<button type="button" role="option" data-t="${esc(t.title)}" data-y="${t.year ?? ""}">${esc(t.title)}<span>${t.year ?? ""}</span></button>`).join("");
+    $("#sugg").innerHTML = list.map(t => `<button type="button" role="option" data-t="${esc(t.title)}" data-y="${t.year ?? ""}">${esc(t.title)}<span>${t.series ? "series" : t.year ?? ""}</span></button>`).join("");
     $("#sugg").hidden = false;
   }
   function hideSugg() { $("#sugg").hidden = true; $("#sugg").innerHTML = ""; }
@@ -1318,7 +1355,7 @@
     if (G.mode === "party") {
       const who = G.cur >= 0 ? G.cur : G.credit;
       if (won && who >= 0) {
-        pts = Math.max(0, p.base + p.bonus - p.penalty); const pl = G.players[who];
+        pts = Math.round(Math.max(0, p.base + p.bonus - p.penalty) * (G.seriesHit ? SERIES_SHARE : 1)); const pl = G.players[who];
         pl.score += pts; pl.nailed += 1; if (G.stage === 0) pl.first += 1; if (G.stage === 3) pl.last += 1;
         pl.fastest = Math.min(pl.fastest, (G.whoAt || performance.now()) - G.filmStart);
         G.credit = who;
@@ -1326,7 +1363,7 @@
       updateHud(); showReveal({ won: won && who >= 0, reason: won && who < 0 ? "nobody" : reason, pts, p, m: 1 }); return;
     }
     if (won) {
-      pts = Math.round(Math.max(0, p.base + p.bonus - p.penalty) * m);
+      pts = Math.round(Math.max(0, p.base + p.bonus - p.penalty) * m * (G.seriesHit ? SERIES_SHARE : 1));
       G.score += pts; G.streak += 1; G.runBest = Math.max(G.runBest, G.streak); G.nailed.push(G.movie);
       badge = STREAK_BADGES[G.streak] || null;
     } else if (reason === "skipped") {
@@ -1362,13 +1399,15 @@
     else if (G.stage === 0) tier = "Standing ovation";
     else if (G.stage <= 2) tier = "Curtain call";
     else tier = "Just made it";
+    if (won && G.mode !== "practice" && G.movie.s && SERIES[G.movie.s]) tier = G.seriesHit ? `Right series! It was this one · ${Math.round(SERIES_SHARE * 100)}% points` : `${tier} · Exact film!`;
     if (G.mode === "party" && won) tier = `${G.players[G.credit].name} · ${tier}`;
     $("#revTier").className = tierCls; $("#revTier").textContent = tier;
 
     if (won && G.mode !== "practice") {
       $("#revBreak").hidden = false;
       const last = G.mode === "party" ? [esc(G.players[G.credit].name), "Point to"] : [`×${m.toFixed(1)}`, "Streak"];
-      $("#revBreak").innerHTML = [[p.base, `${roman(G.stage)} clue`], [`+${p.bonus}`, "Speed"], [p.penalty ? `−${p.penalty}` : "0", `${G.wrong} miss${G.wrong === 1 ? "" : "es"}`, p.penalty ? "var(--coral)" : ""], last]
+      const third = G.seriesHit && !p.penalty ? [`×${SERIES_SHARE}`, "Series"] : [p.penalty ? `−${p.penalty}` : "0", `${G.wrong} miss${G.wrong === 1 ? "" : "es"}`, p.penalty ? "var(--coral)" : ""];
+      $("#revBreak").innerHTML = [[p.base, `${roman(G.stage)} clue`], [`+${p.bonus}`, "Speed"], third, last]
         .map(([v, l, c]) => `<div><b style="${c ? `color:${c}` : ""}">${v}</b><small>${l}</small></div>`).join("");
     } else $("#revBreak").hidden = true;
     const ptsEl = $("#revPts"); ptsEl.style.color = won ? "var(--gold)" : "var(--dim)"; ptsEl.hidden = G.mode === "practice";
