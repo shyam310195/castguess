@@ -318,3 +318,11 @@
     .rticks { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); text-align: center; margin: 0 2px; }
     .rticks span { width: 22px; text-align: center; }
     #revEnd { color: var(--coral); }
+
+    .map-svg.world { background: #0a1a33; }
+    .map-svg.world .land { fill: #34466f; stroke: #0a1a33; stroke-width: .18; stroke-linejoin: round; }
+    .map-svg.world .dot { fill: var(--gold); }
+    .map-svg.world .ping { fill: none; stroke: var(--gold); stroke-width: .5; opacity: .7; }
+    .place-photo { width: 100%; max-height: 220px; object-fit: cover; border-radius: 6px; display: block; }
+    .credit { font-size: 11px; color: var(--dim, #8a93a8); margin-top: 8px; line-height: 1.4; }
+    .credit a { color: inherit; }

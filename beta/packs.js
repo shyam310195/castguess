@@ -7,6 +7,7 @@ const ICONS = {
   countries: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg>',
   brands: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>',
   actors: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></svg>',
+  cities: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
 };
 const LOCK_SVG = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 
@@ -179,15 +180,50 @@ const PACK_DEFS = {
     },
     render(pl, stage, ui, item) {
       if (!ui.has("init")) { ui.tiles(pl.stills.map(x => ({ img: x.still, alt: "Scene from one of their films" }))); ui.locked("Their face"); ui.mark("init"); }
-      if (stage >= 1) ui.card("career", "The career", [`On screen ${item.active}`, item.country && `Born in ${item.country}`, item.born && (item.died ? `${item.born}–${item.died}` : `Born ${item.born}`)].filter(Boolean).join(" · "));
+      if (stage >= 1) ui.card("career", "The career", [`On screen ${item.active}`, [item.born && (item.died ? `${item.born}–${item.died}` : `Born ${item.born}`), item.country && `${item.born ? "in" : "From"} ${item.country}`].filter(Boolean).join(" ")].filter(Boolean).join(" · "));
       if (stage >= 2) { ui.compact(true); ui.card("costars", "Often seen with", item.costars.join(", ")); }
       if (stage >= 3) ui.unlock({ img: item.photo, alt: "Their photo" });
     },
     reveal: item => ({ img: item.photo, meta: [item.country, `On screen ${item.active}`].filter(Boolean).join(" · "), more: "Known for " + item.known.slice(0, 4).map(x => `<b>${esc(x.t)}</b>${x.y ? ` (${x.y})` : ""}`).join(", ") }),
     faces: items => shuffle(items.filter(m => m.f)).slice(0, 3).map(m => ({ img: m.photo })),
   },
+  cities: {
+    id: "cities", name: "Cities & landmarks", unit: "place", units: "places",
+    tagline: "A dot on the map. Name the place before the tour bus leaves.",
+    blurb: "Cities and famous sights, from a dot on the map",
+    filter: { label: "Where", options: [["india", "India"], ["asia", "Asia"], ["europe", "Europe"], ["americas", "Americas"], ["africa", "Africa"], ["oceania", "Oceania"]] },
+    filter2: { key: "type", label: "Type", options: [["city", "Cities"], ["landmark", "Landmarks"]] },
+    years: false,
+    acts: [
+      { n: "Clue 1", name: "The map", hint: "Just a dot on a blank map." },
+      { n: "Clue 2", name: "The basics", hint: "Country, and how big or how old." },
+      { n: "Clue 3", name: "Famous for", hint: "What it's known for. Names hidden." },
+      { n: "Clue 4", name: "The view", hint: "Last clue. Take a look." },
+    ],
+    partial: null, nearText: "Right country, different place",
+    practice: ["Paris", "Taj Mahal"],
+    reasons: ["Wrong spot on the map", "Wrong country or numbers", "Clue gives it away", "Wrong photo", "Other"],
+    init(raw) { WORLD_PATH = raw.world; return { items: raw.items, groups: {}, decoys: raw.decoys || [] }; },
+    plan: item => ({ preload: [item.photo] }),
+    render(pl, stage, ui, item) {
+      if (!ui.has("map")) { ui.replace([{ html: dotMap(item.lon, item.lat), wide: true, alt: "A dot on a world map" }]); ui.mark("map"); }
+      if (stage >= 1) ui.card("basics", item.type === "city" ? "The city" : "The landmark", [item.country, item.type === "city" ? (item.population ? `population about ${fmtPop(item.population)}` : "") : (item.built || (item.natural ? "A natural wonder" : ""))].filter(Boolean).join(" · "));
+      if (stage >= 2) { ui.compact(true); ui.card("famous", "Famous for", item.famous); }
+      if (stage >= 3) ui.card("view", "The view", "", { html: `<img class="place-photo" src="${esc(item.photo)}" alt="Photo of the place">` });
+    },
+    reveal: item => ({ img: item.photo, wide: true, meta: [item.country, item.type === "city" ? "City" : "Landmark"].join(" · "), more: `${esc(item.famousFull)}${creditLine(item.credit)}` }),
+    faces: items => shuffle(items.filter(m => m.f)).slice(0, 3).map(m => ({ img: m.photo })),
+  },
 };
-const PACK_ORDER = ["movies", "tv", "actors", "countries", "brands"];
+const PACK_ORDER = ["movies", "tv", "actors", "countries", "cities", "brands"];
+// A dot on a blank world map (equirectangular; the world outline comes from the cities pack).
+let WORLD_PATH = "";
+function dotMap(lon, lat, w = 90, h = 56) {
+  const x0 = Math.max(-180, Math.min(180 - w, lon - w / 2)), y0 = Math.max(-84, Math.min(84 - h, -lat - h / 2));
+  return `<svg class="map-svg world" viewBox="${x0.toFixed(1)} ${y0.toFixed(1)} ${w} ${h}" preserveAspectRatio="xMidYMid slice"><path class="land" d="${WORLD_PATH}"/><circle class="ping" cx="${lon}" cy="${-lat}" r="3.2"/><circle class="dot" cx="${lon}" cy="${-lat}" r="1.1"/></svg>`;
+}
+// Photo attribution for Wikimedia Commons images.
+const creditLine = c => c ? `<div class="credit">Photo: ${esc(c.by)} · <a href="${esc(c.src)}" target="_blank" rel="noopener">${esc(c.lic)}</a></div>` : "";
 const MANIFEST = window.GN_MANIFEST || {};
 const packReady = id => !!(MANIFEST[id] && MANIFEST[id].ready);
 
@@ -216,12 +252,13 @@ async function loadPack(id) {
 }
 
 // ================= pools =================
-function filterValues(id) { const d = PACK_DEFS[id]; const f = packPrefs(id).filter; return d.filter ? (f && f.length ? f : d.filter.options.map(o => o[0])) : null; }
+function filterValues(id, which = "filter") { const d = PACK_DEFS[id]; const f = packPrefs(id)[which]; return d[which] ? (f && f.length ? f : d[which].options.map(o => o[0])) : null; }
 function yearOk(id, m) { const pp = packPrefs(id), y = m.year || 0; if (!PACK_DEFS[id].years) return true; return (pp.yearFrom == null || y >= pp.yearFrom) && (pp.yearTo == null || y <= pp.yearTo); }
 function pool(id, difficulty = DB.prefs.difficulty) {
   const P = PACKS[id]; if (!P) return [];
   const vals = filterValues(id);
-  const base = P.items.filter(m => (!vals || vals.includes(m.cat)) && yearOk(id, m));
+  const f2 = P.def.filter2, vals2 = filterValues(id, "filter2");
+  const base = P.items.filter(m => (!vals || vals.includes(m.cat)) && (!f2 || vals2.includes(m[f2.key])) && yearOk(id, m));
   const min = POP_MIN[difficulty] || 0;
   const famous = difficulty === "supereasy" ? base.filter(m => m.f) : base.filter(m => m.pop >= min);
   return famous.length >= 30 || famous.length === base.length ? famous : base;   // small selections keep everything
