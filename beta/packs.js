@@ -10,6 +10,7 @@ const ICONS = {
   cities: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
   animals: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="6" cy="9" r="2"/><circle cx="10" cy="5.5" r="2"/><circle cx="14" cy="5.5" r="2"/><circle cx="18" cy="9" r="2"/><path d="M12 11c-3 0-6 4-6 7a3 3 0 0 0 3 3c1.2 0 2-.6 3-.6s1.8.6 3 .6a3 3 0 0 0 3-3c0-3-3-7-6-7z"/></svg>',
   people: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>',
+  sports: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 13v4M8 21h8M9 17h6"/></svg>',
 };
 const LOCK_SVG = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 
@@ -271,8 +272,42 @@ const PACK_DEFS = {
     reveal: item => ({ img: item.photo, meta: [item.country, item.era].filter(Boolean).join(" · "), more: `${item.achFull.map(esc).join(" · ")}${creditLine(item.credit)}` }),
     faces: items => shuffle(items.filter(m => m.f)).slice(0, 3).map(m => ({ img: m.photo })),
   },
+  sports: {
+    id: "sports", name: "Sports stars", unit: "player", units: "players",
+    tagline: "Their teams, their numbers, their moment. Name the player before the final whistle.",
+    blurb: "Cricket, football, tennis & more",
+    filter: { label: "Sports", options: [["cricket", "Cricket"], ["football", "Football"], ["hockey", "Hockey"], ["tennis", "Tennis"], ["basketball", "Basketball"], ["athletics", "Athletics"], ["other", "Other sports"]] },
+    years: false,
+    acts: [
+      { n: "Clue 1", name: "The teams", hint: "Who they played for." },
+      { n: "Clue 2", name: "The numbers", hint: "Their key career numbers." },
+      { n: "Clue 3", name: "The moment", hint: "Their most famous moment. Names hidden." },
+      { n: "Clue 4", name: "The face", hint: "Last clue. Here they are." },
+    ],
+    partial: null, nearText: "",
+    practice: ["Sachin Tendulkar", "Lionel Messi"],
+    reasons: ["Wrong teams", "Wrong numbers", "Wrong or misleading moment", "Wrong photo", "Other"],
+    init(raw) { return { items: raw.items, groups: {}, decoys: raw.decoys || [] }; },
+    plan: (item, diff) => ({ hideNat: diff === "hard", preload: item.photo ? [item.photo] : [] }),
+    render(pl, stage, ui, item) {
+      if (!ui.has("board")) {
+        const yrs = t => t[1] ? ` <small>${t[1]}${t[2] ? `–${t[2]}` : "–"}</small>` : "";
+        const clubs = item.teams.filter(t => !t[3]);
+        const rows = (pl.hideNat && clubs.length >= 2 ? clubs : item.teams).slice(0, 6);
+        const body = rows.length ? `<ul>${rows.map(t => `<li>${esc(t[0])}${yrs(t)}</li>`).join("")}</ul>` : `<p>${item.country ? `Represents <b>${esc(item.country)}</b>` : "Competes on their own"}${item.role ? ` · ${esc(item.role)}` : ""}${item.born ? ` · born ${item.born}` : ""}</p>`;
+        ui.replace([{ html: `<div class="team-board"><div class="label gold">${rows.length ? "Played for" : "Individual sport"}</div>${body}</div>`, wide: true, alt: "Teams they played for" }]);
+        ui.mark("board");
+      }
+      if (stage >= 1) ui.card("stats", "The numbers", item.stats);
+      if (stage >= 2) { ui.compact(true); ui.card("moment", "The moment", item.moment, { serif: true, typed: true }); }
+      if (stage >= 3) ui.card("face", "The face", "", { html: item.photo ? `<img class="place-photo portrait" src="${esc(item.photo)}" alt="Photo">` : initialsCard(item.title, true) });
+    },
+    reveal: item => ({ ...(item.photo ? { img: item.photo } : { html: initialsCard(item.title, true) }), meta: [item.country, item.role].filter(Boolean).join(" · "), more: `${esc(item.momentFull)}${item.photo ? creditLine(item.credit) : `<div class="credit">No freely licensed photo available.</div>`}` }),
+    faces: items => shuffle(items.filter(m => m.f && m.photo)).slice(0, 3).map(m => ({ img: m.photo })),
+  },
 };
-const PACK_ORDER = ["movies", "tv", "actors", "people", "countries", "cities", "animals", "brands"];
+const PACK_ORDER = ["movies", "tv", "actors", "people", "sports", "countries", "cities", "animals", "brands"];
+const initialsCard = (name, note) => `<div class="initials-card"><b>${esc(name.split(/\s+/).filter(w => /^[A-Z]/.test(w)).map(w => w[0]).slice(0, 3).join(""))}</b>${note ? "<small>No free photo available</small>" : ""}</div>`;
 // Continents map for animals (outlines come from the animals pack).
 let CONTINENTS = {};
 const CONT_NAMES = { AF: "Africa", AS: "Asia", EU: "Europe", NA: "North America", SA: "South America", OC: "Oceania", AN: "Antarctica", OCEAN: "the oceans" };

@@ -337,3 +337,12 @@
 
     .actor .ph img.crop { transform: scale(var(--z, 2.6)); transform-origin: 50% 26%; object-position: 50% 20%; }
     ul.ach { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; line-height: 1.4; }
+
+    .team-board { width: 100%; height: 100%; box-sizing: border-box; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+    .team-board ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
+    .team-board li small { color: var(--muted); margin-left: 4px; }
+    .team-board p { margin: 0; font-size: 16px; line-height: 1.5; }
+    .place-photo.portrait { max-height: 260px; object-position: 50% 20%; }
+    .initials-card { width: 100%; min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border-radius: 6px; background: linear-gradient(135deg, var(--s2), var(--b1)); }
+    .initials-card b { font-family: "Playfair Display", serif; font-size: 56px; color: var(--gold); }
+    .initials-card small { color: var(--muted); font-size: 12px; }

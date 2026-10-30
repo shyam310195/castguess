@@ -54,7 +54,7 @@ async function startGame(mode, ids) {
   else for (const id of ids) { const p = pool(id); if (p.length) decks[id] = freshDeck(id, p); }
   ids = ids.filter(id => decks[id] && decks[id].length);
   if (!ids.length) { toast("Nothing matches your choices. Try widening the filters."); return; }
-  Object.assign(G, { mode, packIds: ids, decks, score: 0, lives: LIVES, streak: 0, runBest: 0, nailed: [], missed: [], skipped: [], skipsLeft: MAX_SKIPS, roundNo: 0, results: [], item: null,
+  Object.assign(G, { mode, packIds: ids, decks, bag: [], score: 0, lives: LIVES, streak: 0, runBest: 0, nailed: [], missed: [], skipped: [], skipsLeft: MAX_SKIPS, roundNo: 0, results: [], item: null,
     stageMs: (mode === "daily" ? DAILY_SEC : DB.prefs.stageSec) * 1000 });
   if (mode === "party") {
     const pp = DB.prefs.party;
@@ -73,7 +73,9 @@ async function startGame(mode, ids) {
 }
 function nextItem() {
   const ids = G.packIds;
-  let id = ids.length === 1 ? ids[0] : ids[Math.floor(Math.random() * ids.length)];
+  // mixed games deal categories from a shuffled bag, so each one comes up before any repeats
+  if (ids.length > 1 && !(G.bag && G.bag.length)) { G.bag = shuffle([...ids]); if (G.item && G.bag[0] === G.item.pk.id) G.bag.push(G.bag.shift()); }
+  let id = ids.length === 1 ? ids[0] : G.bag.shift();
   if ((G.mode === "solo" || G.mode === "party") && !G.decks[id].length) { G.decks[id] = freshDeck(id, pool(id)); const d = G.decks[id]; if (G.item && d.length > 1 && d[0].id === G.item.id) d.push(d.shift()); }
   return G.decks[id].shift();
 }
@@ -417,7 +419,7 @@ $("#revNext").addEventListener("click", () => {
 });
 
 // ================= report a problem =================
-const REPORT_KEY = "guessnight.reports", APP_VERSION = "4.2";
+const REPORT_KEY = "guessnight.reports", APP_VERSION = "4.3";
 let reportReason = "";
 $("#reportBtn").addEventListener("click", () => {
   stopAuto(); G.autoResume = false; reportReason = "";
