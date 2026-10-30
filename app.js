@@ -112,6 +112,12 @@ async function goHome() {
     $("#homeFilterLabel").textContent = def.filter.label;
     $("#homeFilters").innerHTML = def.filter.options.map(([v, l]) => `<button class="chip" data-f="${v}" aria-pressed="${vals.includes(v)}"><svg class="tick" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>${esc(l)}</button>`).join("");
   }
+  $("#homeFilter2Box").hidden = !def.filter2;
+  if (def.filter2) {
+    const vals = filterValues(id, "filter2");
+    $("#homeFilter2Label").textContent = def.filter2.label;
+    $("#homeFilters2").innerHTML = def.filter2.options.map(([v, l]) => `<button class="chip" data-f="${v}" aria-pressed="${vals.includes(v)}"><svg class="tick" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>${esc(l)}</button>`).join("");
+  }
   $$("#homeDiff button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === DB.prefs.difficulty)));
   $$("#homeTime button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.v === DB.prefs.stageSec)));
   $("#homeYearsBox").hidden = !def.years;
@@ -124,13 +130,13 @@ async function goHome() {
   updateCounts(); syncVoiceUI(); renderHomeRounds();
   show("homeScreen");
 }
-$("#homeFilters").addEventListener("click", e => {
+[["#homeFilters", "filter"], ["#homeFilters2", "filter2"]].forEach(([sel, which]) => $(sel).addEventListener("click", e => {
   const b = e.target.closest("button[data-f]"); if (!b) return;
-  const id = DB.prefs.cat, cur = new Set(filterValues(id));
+  const id = DB.prefs.cat, cur = new Set(filterValues(id, which));
   if (cur.has(b.dataset.f)) { if (cur.size === 1) { toast("Pick at least one."); return; } cur.delete(b.dataset.f); } else cur.add(b.dataset.f);
-  packPrefs(id).filter = [...cur]; save();
-  $$("#homeFilters [data-f]").forEach(x => x.setAttribute("aria-pressed", String(cur.has(x.dataset.f)))); updateCounts();
-});
+  packPrefs(id)[which] = [...cur]; save();
+  $$(`${sel} [data-f]`).forEach(x => x.setAttribute("aria-pressed", String(cur.has(x.dataset.f)))); updateCounts();
+}));
 function bindSeg(sel, key, after) { $$(`${sel} button`).forEach(b => b.addEventListener("click", () => { DB.prefs[key] = b.dataset.v; save(); $$(`${sel} button`).forEach(x => x.setAttribute("aria-pressed", String(x === b))); after && after(); })); }
 bindSeg("#homeDiff", "difficulty", updateCounts); bindSeg("#setDiff", "difficulty");
 $$("#homeTime button, #setTime button").forEach(b => b.addEventListener("click", () => {
@@ -304,10 +310,11 @@ $("#resetSeen").addEventListener("click", e => {
 $("#replayTutorial").addEventListener("click", startOnboarding);
 function showAbout() {
   $("#aboutBody").innerHTML = `
-    <p><b>Guess Night</b> is a free guessing game: four clues per round across movies, TV shows, countries and brands.</p>
-    <p><b>Movies & TV:</b> film and show data and images from The Movie Database (TMDB). This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+    <p><b>Guess Night</b> is a free guessing game: four clues per round across ${PACK_ORDER.filter(packReady).map(id => PACK_DEFS[id].name.toLowerCase()).join(", ").replace(/, ([^,]*)$/, " and $1")}.</p>
+    <p><b>Movies, TV & Actors:</b> film, show and people data and images from The Movie Database (TMDB). This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
     <p><b>Countries:</b> outlines from Natural Earth (public domain); names, capitals, languages, currencies and borders from the mledoze/countries dataset (Open Database Licence 1.0, so this country data is shared under the same licence); population estimates from Natural Earth; flags from flag-icons by Panayiotis Lipiridis (MIT licence); “famous for” notes hand-written.</p>
     <p><b>Brands:</b> hand-curated facts and slogans (please report anything wrong). Colours are approximations; no logos are used. Brand names are trademarks of their owners and appear only for the quiz.</p>
+    <p><b>Cities, People, Sports & Animals:</b> facts from Wikidata (CC0) and hand-written clues (please report anything wrong). Photos come from Wikimedia Commons under each author's licence (public domain, CC0, CC BY, CC BY-SA or Free Art License), credited with a link on every answer screen. Map outlines from Natural Earth. Animal silhouettes from PhyloPic, credited per image.</p>
     <p><b>Privacy:</b> we count anonymous plays to improve the game (GoatCounter). No cookies, no personal data. Your progress stays on this device.</p>
     <p><b>Version:</b> ${APP_VERSION}</p>`;
   show("aboutScreen");

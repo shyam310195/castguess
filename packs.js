@@ -6,6 +6,11 @@ const ICONS = {
   tv: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 21h8M9 3l3 3 3-3"/></svg>',
   countries: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg>',
   brands: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>',
+  actors: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></svg>',
+  cities: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+  animals: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="6" cy="9" r="2"/><circle cx="10" cy="5.5" r="2"/><circle cx="14" cy="5.5" r="2"/><circle cx="18" cy="9" r="2"/><path d="M12 11c-3 0-6 4-6 7a3 3 0 0 0 3 3c1.2 0 2-.6 3-.6s1.8.6 3 .6a3 3 0 0 0 3-3c0-3-3-7-6-7z"/></svg>',
+  people: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>',
+  sports: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 13v4M8 21h8M9 17h6"/></svg>',
 };
 const LOCK_SVG = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 
@@ -151,8 +156,174 @@ const PACK_DEFS = {
     reveal: item => ({ html: `<div class="brand-card" style="background:${esc(item.colours[0])};color:${esc(item.ink || "#fff")}">${esc(item.title)}</div>`, meta: [item.sector, item.country, item.founded].filter(Boolean).join(" · "), more: item.slogan ? `“${esc(item.slogan)}”` : "" }),
     faces: items => shuffle(items).slice(0, 3).map(m => ({ html: `<div class="swatches">${m.colours.map(c => `<i style="background:${esc(c)}"></i>`).join("")}</div>` })),
   },
+  actors: {
+    id: "actors", name: "Actors", unit: "star", units: "stars",
+    tagline: "Three scenes from their best work. Name the star before the curtain call.",
+    blurb: "Hollywood, Bollywood & TV stars, from their films",
+    filter: { label: "Stars from", options: [["hollywood", "Hollywood"], ["bollywood", "Bollywood"], ["tv", "TV"]] },
+    years: false,
+    acts: [
+      { n: "Scene 1", name: "The filmography", hint: "Stills from three of their films or shows." },
+      { n: "Scene 2", name: "The career", hint: "When they started and where they're from." },
+      { n: "Scene 3", name: "The co-stars", hint: "The people they share the screen with most." },
+      { n: "Scene 4", name: "The face", hint: "Last clue. Here they are." },
+    ],
+    partial: null, nearText: "",
+    practice: ["Shah Rukh Khan", "Tom Hanks"],
+    reasons: ["Wrong film still", "Wrong career facts", "Wrong co-stars", "Wrong photo", "Other"],
+    init(raw) {
+      const IMG = raw.img;
+      return { items: raw.items.map(a => ({ ...a, photo: IMG + "h632" + a.photo, known: a.known.map(([t, y, k, still, poster]) => ({ t, y, k, still: IMG + "w780" + still, poster: poster ? IMG + "w500" + poster : "" })) })), groups: {}, decoys: raw.decoys || [] };
+    },
+    plan(item, diff, rng) {
+      const k = item.known, n = k.length;
+      const idx = diff === "supereasy" || diff === "easy" ? [0, 1, 2] : diff === "medium" ? [0, Math.min(2, n - 1), Math.min(3, n - 1)] : [Math.min(1, n - 1), Math.min(3, n - 1), n - 1];
+      const picks = [...new Set(idx)].map(i => k[i]); for (const x of k) { if (picks.length >= 3) break; if (!picks.includes(x)) picks.push(x); }
+      return { stills: shuffle(picks, rng), preload: [...picks.map(x => x.still), item.photo] };
+    },
+    render(pl, stage, ui, item) {
+      if (!ui.has("init")) { ui.tiles(pl.stills.map(x => ({ img: x.still, alt: "Scene from one of their films" }))); ui.locked("Their face"); ui.mark("init"); }
+      if (stage >= 1) ui.card("career", "The career", [`On screen ${item.active}`, [item.born && (item.died ? `${item.born}–${item.died}` : `Born ${item.born}`), item.country && `${item.born ? "in" : "From"} ${item.country}`].filter(Boolean).join(" ")].filter(Boolean).join(" · "));
+      if (stage >= 2) { ui.compact(true); ui.card("costars", "Often seen with", item.costars.join(", ")); }
+      if (stage >= 3) ui.unlock({ img: item.photo, alt: "Their photo" });
+    },
+    reveal: item => ({ img: item.photo, meta: [item.country, `On screen ${item.active}`].filter(Boolean).join(" · "), more: "Known for " + item.known.slice(0, 4).map(x => `<b>${esc(x.t)}</b>${x.y ? ` (${x.y})` : ""}`).join(", ") }),
+    faces: items => shuffle(items.filter(m => m.f)).slice(0, 3).map(m => ({ img: m.photo })),
+  },
+  cities: {
+    id: "cities", name: "Cities & landmarks", unit: "place", units: "places",
+    tagline: "A dot on the map. Name the place before the tour bus leaves.",
+    blurb: "Cities and famous sights, from a dot on the map",
+    filter: { label: "Where", options: [["india", "India"], ["asia", "Asia"], ["europe", "Europe"], ["americas", "Americas"], ["africa", "Africa"], ["oceania", "Oceania"]] },
+    filter2: { key: "type", label: "Type", options: [["city", "Cities"], ["landmark", "Landmarks"]] },
+    years: false,
+    acts: [
+      { n: "Clue 1", name: "The map", hint: "Just a dot on a blank map." },
+      { n: "Clue 2", name: "The basics", hint: "Country, and how big or how old." },
+      { n: "Clue 3", name: "Famous for", hint: "What it's known for. Names hidden." },
+      { n: "Clue 4", name: "The view", hint: "Last clue. Take a look." },
+    ],
+    partial: null, nearText: "Right country, different place",
+    practice: ["Paris", "Taj Mahal"],
+    reasons: ["Wrong spot on the map", "Wrong country or numbers", "Clue gives it away", "Wrong photo", "Other"],
+    init(raw) { WORLD_PATH = raw.world; return { items: raw.items, groups: {}, decoys: raw.decoys || [] }; },
+    plan: item => ({ preload: [item.photo] }),
+    render(pl, stage, ui, item) {
+      if (!ui.has("map")) { ui.replace([{ html: dotMap(item.lon, item.lat), wide: true, alt: "A dot on a world map" }]); ui.mark("map"); }
+      if (stage >= 1) ui.card("basics", item.type === "city" ? "The city" : "The landmark", [item.country, item.type === "city" ? (item.population ? `population about ${fmtPop(item.population)}` : "") : (item.built || (item.natural ? "A natural wonder" : ""))].filter(Boolean).join(" · "));
+      if (stage >= 2) { ui.compact(true); ui.card("famous", "Famous for", item.famous); }
+      if (stage >= 3) ui.card("view", "The view", "", { html: `<img class="place-photo" src="${esc(item.photo)}" alt="Photo of the place">` });
+    },
+    reveal: item => ({ img: item.photo, wide: true, meta: [item.country, item.type === "city" ? "City" : "Landmark"].join(" · "), more: `${esc(item.famousFull)}${creditLine(item.credit)}` }),
+    faces: items => shuffle(items.filter(m => m.f)).slice(0, 3).map(m => ({ img: m.photo })),
+  },
+  animals: {
+    id: "animals", name: "Animals", unit: "animal", units: "animals",
+    tagline: "A shadow in the wild. Name the animal before it runs off.",
+    blurb: "From silhouettes, habitats and fun facts",
+    filter: { label: "Animals", options: [["mammals", "Mammals"], ["birds", "Birds"], ["sea", "Sea life"], ["reptiles", "Reptiles & amphibians"], ["bugs", "Bugs"]] },
+    years: false,
+    acts: [
+      { n: "Clue 1", name: "The shadow", hint: "Just its outline." },
+      { n: "Clue 2", name: "The home", hint: "Where in the world it lives." },
+      { n: "Clue 3", name: "The fact", hint: "A fun fact. Name hidden." },
+      { n: "Clue 4", name: "The reveal", hint: "Last clue. Here it is." },
+    ],
+    partial: null, nearText: "Same family, different animal",
+    practice: ["Tiger", "Giraffe"],
+    reasons: ["Wrong silhouette", "Wrong habitat", "Wrong or misleading fact", "Wrong photo", "Other"],
+    init(raw) { CONTINENTS = raw.continents; return { items: raw.items, groups: {}, decoys: raw.decoys || [] }; },
+    plan: item => ({ preload: [item.shadow ? item.shadow.url : item.photo, item.photo] }),
+    render(pl, stage, ui, item) {
+      if (!ui.has("shadow")) {
+        ui.replace([item.shadow ? { html: `<img class="silhouette" src="${esc(item.shadow.url)}" alt="Animal silhouette">`, wide: true, alt: "Animal silhouette" } : { html: `<img class="blurshadow" src="${esc(item.photo)}" alt="Blurred animal shape">`, wide: true, alt: "Blurred animal shape" }]);
+        ui.mark("shadow");
+      }
+      if (stage >= 1) ui.card("home", "The home", "", { html: `${continentMap(item.where)}<p>${esc(whereText(item.where))} · ${esc(item.habitat)}</p>` });
+      if (stage >= 2) { ui.compact(true); ui.card("fact", "Fun fact", item.fact, { serif: true, typed: true }); }
+      if (stage >= 3) ui.card("view", "The reveal", "", { html: `<img class="place-photo" src="${esc(item.photo)}" alt="Photo of the animal">` });
+    },
+    reveal: item => ({ img: item.photo, wide: true, meta: [item.sci, whereText(item.where)].filter(Boolean).join(" · "), more: `${esc(item.factFull)}${creditLine(item.credit)}${item.shadow ? `<div class="credit">Silhouette: ${esc(item.shadow.by)} · <a href="${esc(item.shadow.src)}" target="_blank" rel="noopener">${esc(item.shadow.lic)}</a> (PhyloPic)</div>` : ""}` }),
+    faces: items => shuffle(items.filter(m => m.f && m.shadow)).slice(0, 3).map(m => ({ html: `<img class="silhouette" src="${esc(m.shadow.url)}" alt="">` })),
+  },
+  people: {
+    id: "people", name: "Famous people", unit: "person", units: "people",
+    tagline: "A face in close-up. Name them before history moves on.",
+    blurb: "Leaders, scientists, artists and icons",
+    filter: { label: "Fields", options: [["politics", "Politics"], ["science", "Science"], ["music", "Music"], ["business", "Business"], ["arts", "Arts & writing"], ["history", "History"]] },
+    years: false,
+    acts: [
+      { n: "Clue 1", name: "The close-up", hint: "A tight crop of their photo." },
+      { n: "Clue 2", name: "The basics", hint: "What they did, where and when." },
+      { n: "Clue 3", name: "The record", hint: "Three things they're known for." },
+      { n: "Clue 4", name: "The portrait", hint: "Last clue. The full picture." },
+    ],
+    partial: null, nearText: "",
+    practice: ["Albert Einstein", "Mahatma Gandhi"],
+    reasons: ["Wrong or unclear photo", "Wrong facts", "Achievement gives it away", "Wrong person", "Other"],
+    init(raw) { return { items: raw.items, groups: {}, decoys: raw.decoys || [] }; },
+    plan: (item, diff) => ({ zoom: diff === "hard" ? 3.4 : diff === "medium" || diff === "mixed" ? 2.7 : 2.1, preload: [item.photo] }),
+    render(pl, stage, ui, item) {
+      if (stage < 3 && !ui.has("crop")) { ui.replace([{ html: `<img class="crop" style="--z:${pl.zoom}" src="${esc(item.photo)}" alt="Close-up crop">`, wide: true, alt: "Close-up crop of a photo" }]); ui.mark("crop"); }
+      if (stage >= 1) ui.card("basics", "The basics", [item.role && item.role[0].toUpperCase() + item.role.slice(1), item.country && `Born in ${item.country}`, item.era].filter(Boolean).join(" · "));
+      if (stage >= 2) { ui.compact(true); ui.card("ach", "Known for", "", { html: `<ul class="ach">${item.ach.map(a => `<li>${esc(a)}</li>`).join("")}</ul>` }); }
+      if (stage >= 3 && !ui.has("full")) { ui.replace([{ img: item.photo, wide: true, alt: "Portrait" }]); ui.mark("full"); }
+    },
+    reveal: item => ({ img: item.photo, meta: [item.country, item.era].filter(Boolean).join(" · "), more: `${item.achFull.map(esc).join(" · ")}${creditLine(item.credit)}` }),
+    faces: items => shuffle(items.filter(m => m.f)).slice(0, 3).map(m => ({ img: m.photo })),
+  },
+  sports: {
+    id: "sports", name: "Sports stars", unit: "player", units: "players",
+    tagline: "Their teams, their numbers, their moment. Name the player before the final whistle.",
+    blurb: "Cricket, football, tennis & more",
+    filter: { label: "Sports", options: [["cricket", "Cricket"], ["football", "Football"], ["hockey", "Hockey"], ["tennis", "Tennis"], ["basketball", "Basketball"], ["athletics", "Athletics"], ["other", "Other sports"]] },
+    years: false,
+    acts: [
+      { n: "Clue 1", name: "The teams", hint: "Who they played for." },
+      { n: "Clue 2", name: "The numbers", hint: "Their key career numbers." },
+      { n: "Clue 3", name: "The moment", hint: "Their most famous moment. Names hidden." },
+      { n: "Clue 4", name: "The face", hint: "Last clue. Here they are." },
+    ],
+    partial: null, nearText: "",
+    practice: ["Sachin Tendulkar", "Lionel Messi"],
+    reasons: ["Wrong teams", "Wrong numbers", "Wrong or misleading moment", "Wrong photo", "Other"],
+    init(raw) { return { items: raw.items, groups: {}, decoys: raw.decoys || [] }; },
+    plan: (item, diff) => ({ hideNat: diff === "hard", preload: item.photo ? [item.photo] : [] }),
+    render(pl, stage, ui, item) {
+      if (!ui.has("board")) {
+        const yrs = t => t[1] ? ` <small>${t[1]}${t[2] ? `–${t[2]}` : "–"}</small>` : "";
+        const clubs = item.teams.filter(t => !t[3]);
+        const rows = (pl.hideNat && clubs.length >= 2 ? clubs : item.teams).slice(0, 6);
+        const body = rows.length ? `<ul>${rows.map(t => `<li>${esc(t[0])}${yrs(t)}</li>`).join("")}</ul>` : `<p>${item.country ? `Represents <b>${esc(item.country)}</b>` : "Competes on their own"}${item.role ? ` · ${esc(item.role)}` : ""}${item.born ? ` · born ${item.born}` : ""}</p>`;
+        ui.replace([{ html: `<div class="team-board"><div class="label gold">${rows.length ? "Played for" : "Individual sport"}</div>${body}</div>`, wide: true, alt: "Teams they played for" }]);
+        ui.mark("board");
+      }
+      if (stage >= 1) ui.card("stats", "The numbers", item.stats);
+      if (stage >= 2) { ui.compact(true); ui.card("moment", "The moment", item.moment, { serif: true, typed: true }); }
+      if (stage >= 3) ui.card("face", "The face", "", { html: item.photo ? `<img class="place-photo portrait" src="${esc(item.photo)}" alt="Photo">` : initialsCard(item.title, true) });
+    },
+    reveal: item => ({ ...(item.photo ? { img: item.photo } : { html: initialsCard(item.title, true) }), meta: [item.country, item.role].filter(Boolean).join(" · "), more: `${esc(item.momentFull)}${item.photo ? creditLine(item.credit) : `<div class="credit">No freely licensed photo available.</div>`}` }),
+    faces: items => shuffle(items.filter(m => m.f && m.photo)).slice(0, 3).map(m => ({ img: m.photo })),
+  },
 };
-const PACK_ORDER = ["movies", "tv", "countries", "brands"];
+const PACK_ORDER = ["movies", "tv", "actors", "people", "sports", "countries", "cities", "animals", "brands"];
+const initialsCard = (name, note) => `<div class="initials-card"><b>${esc(name.split(/\s+/).filter(w => /^[A-Z]/.test(w)).map(w => w[0]).slice(0, 3).join(""))}</b>${note ? "<small>No free photo available</small>" : ""}</div>`;
+// Continents map for animals (outlines come from the animals pack).
+let CONTINENTS = {};
+const CONT_NAMES = { AF: "Africa", AS: "Asia", EU: "Europe", NA: "North America", SA: "South America", OC: "Oceania", AN: "Antarctica", OCEAN: "the oceans" };
+function whereText(w) { const land = w.filter(c => c !== "OCEAN"); return land.length >= 6 ? "Almost everywhere" : land.length ? land.map(c => CONT_NAMES[c]).join(", ") + (w.includes("OCEAN") ? " and the oceans" : "") : "The oceans"; }
+function continentMap(w) {
+  const keys = Object.keys(CONTINENTS).filter(k => k !== "AN" || w.includes("AN"));
+  return `<svg class="map-svg cont${w.includes("OCEAN") ? " sea-on" : ""}" viewBox="-170 ${w.includes("AN") ? -80 : -80} 340 ${w.includes("AN") ? 165 : 140}" preserveAspectRatio="xMidYMid meet">${keys.map(k => `<path class="${w.includes(k) ? "on" : ""}" d="${CONTINENTS[k]}"/>`).join("")}</svg>`;
+}
+// A dot on a blank world map (equirectangular; the world outline comes from the cities pack).
+let WORLD_PATH = "";
+function dotMap(lon, lat, w = 90, h = 56) {
+  const x0 = Math.max(-180, Math.min(180 - w, lon - w / 2)), y0 = Math.max(-84, Math.min(84 - h, -lat - h / 2));
+  return `<svg class="map-svg world" viewBox="${x0.toFixed(1)} ${y0.toFixed(1)} ${w} ${h}" preserveAspectRatio="xMidYMid slice"><path class="land" d="${WORLD_PATH}"/><circle class="ping" cx="${lon}" cy="${-lat}" r="3.2"/><circle class="dot" cx="${lon}" cy="${-lat}" r="1.1"/></svg>`;
+}
+// Photo attribution for Wikimedia Commons images.
+const creditLine = c => c ? `<div class="credit">Photo: ${esc(c.by)} · <a href="${esc(c.src)}" target="_blank" rel="noopener">${esc(c.lic)}</a></div>` : "";
 const MANIFEST = window.GN_MANIFEST || {};
 const packReady = id => !!(MANIFEST[id] && MANIFEST[id].ready);
 
@@ -181,12 +352,13 @@ async function loadPack(id) {
 }
 
 // ================= pools =================
-function filterValues(id) { const d = PACK_DEFS[id]; const f = packPrefs(id).filter; return d.filter ? (f && f.length ? f : d.filter.options.map(o => o[0])) : null; }
+function filterValues(id, which = "filter") { const d = PACK_DEFS[id]; const f = packPrefs(id)[which]; return d[which] ? (f && f.length ? f : d[which].options.map(o => o[0])) : null; }
 function yearOk(id, m) { const pp = packPrefs(id), y = m.year || 0; if (!PACK_DEFS[id].years) return true; return (pp.yearFrom == null || y >= pp.yearFrom) && (pp.yearTo == null || y <= pp.yearTo); }
 function pool(id, difficulty = DB.prefs.difficulty) {
   const P = PACKS[id]; if (!P) return [];
   const vals = filterValues(id);
-  const base = P.items.filter(m => (!vals || vals.includes(m.cat)) && yearOk(id, m));
+  const f2 = P.def.filter2, vals2 = filterValues(id, "filter2");
+  const base = P.items.filter(m => (!vals || vals.includes(m.cat)) && (!f2 || vals2.includes(m[f2.key])) && yearOk(id, m));
   const min = POP_MIN[difficulty] || 0;
   const famous = difficulty === "supereasy" ? base.filter(m => m.f) : base.filter(m => m.pop >= min);
   return famous.length >= 30 || famous.length === base.length ? famous : base;   // small selections keep everything
