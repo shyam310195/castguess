@@ -8,6 +8,7 @@ const ICONS = {
   brands: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>',
   actors: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></svg>',
   cities: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+  animals: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="6" cy="9" r="2"/><circle cx="10" cy="5.5" r="2"/><circle cx="14" cy="5.5" r="2"/><circle cx="18" cy="9" r="2"/><path d="M12 11c-3 0-6 4-6 7a3 3 0 0 0 3 3c1.2 0 2-.6 3-.6s1.8.6 3 .6a3 3 0 0 0 3-3c0-3-3-7-6-7z"/></svg>',
 };
 const LOCK_SVG = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 
@@ -214,8 +215,45 @@ const PACK_DEFS = {
     reveal: item => ({ img: item.photo, wide: true, meta: [item.country, item.type === "city" ? "City" : "Landmark"].join(" · "), more: `${esc(item.famousFull)}${creditLine(item.credit)}` }),
     faces: items => shuffle(items.filter(m => m.f)).slice(0, 3).map(m => ({ img: m.photo })),
   },
+  animals: {
+    id: "animals", name: "Animals", unit: "animal", units: "animals",
+    tagline: "A shadow in the wild. Name the animal before it runs off.",
+    blurb: "From silhouettes, habitats and fun facts",
+    filter: { label: "Animals", options: [["mammals", "Mammals"], ["birds", "Birds"], ["sea", "Sea life"], ["reptiles", "Reptiles & amphibians"], ["bugs", "Bugs"]] },
+    years: false,
+    acts: [
+      { n: "Clue 1", name: "The shadow", hint: "Just its outline." },
+      { n: "Clue 2", name: "The home", hint: "Where in the world it lives." },
+      { n: "Clue 3", name: "The fact", hint: "A fun fact. Name hidden." },
+      { n: "Clue 4", name: "The reveal", hint: "Last clue. Here it is." },
+    ],
+    partial: null, nearText: "Same family, different animal",
+    practice: ["Tiger", "Giraffe"],
+    reasons: ["Wrong silhouette", "Wrong habitat", "Wrong or misleading fact", "Wrong photo", "Other"],
+    init(raw) { CONTINENTS = raw.continents; return { items: raw.items, groups: {}, decoys: raw.decoys || [] }; },
+    plan: item => ({ preload: [item.shadow ? item.shadow.url : item.photo, item.photo] }),
+    render(pl, stage, ui, item) {
+      if (!ui.has("shadow")) {
+        ui.replace([item.shadow ? { html: `<img class="silhouette" src="${esc(item.shadow.url)}" alt="Animal silhouette">`, wide: true, alt: "Animal silhouette" } : { html: `<img class="blurshadow" src="${esc(item.photo)}" alt="Blurred animal shape">`, wide: true, alt: "Blurred animal shape" }]);
+        ui.mark("shadow");
+      }
+      if (stage >= 1) ui.card("home", "The home", "", { html: `${continentMap(item.where)}<p>${esc(whereText(item.where))} · ${esc(item.habitat)}</p>` });
+      if (stage >= 2) { ui.compact(true); ui.card("fact", "Fun fact", item.fact, { serif: true, typed: true }); }
+      if (stage >= 3) ui.card("view", "The reveal", "", { html: `<img class="place-photo" src="${esc(item.photo)}" alt="Photo of the animal">` });
+    },
+    reveal: item => ({ img: item.photo, wide: true, meta: [item.sci, whereText(item.where)].filter(Boolean).join(" · "), more: `${esc(item.factFull)}${creditLine(item.credit)}${item.shadow ? `<div class="credit">Silhouette: ${esc(item.shadow.by)} · <a href="${esc(item.shadow.src)}" target="_blank" rel="noopener">${esc(item.shadow.lic)}</a> (PhyloPic)</div>` : ""}` }),
+    faces: items => shuffle(items.filter(m => m.f && m.shadow)).slice(0, 3).map(m => ({ html: `<img class="silhouette" src="${esc(m.shadow.url)}" alt="">` })),
+  },
 };
-const PACK_ORDER = ["movies", "tv", "actors", "countries", "cities", "brands"];
+const PACK_ORDER = ["movies", "tv", "actors", "countries", "cities", "animals", "brands"];
+// Continents map for animals (outlines come from the animals pack).
+let CONTINENTS = {};
+const CONT_NAMES = { AF: "Africa", AS: "Asia", EU: "Europe", NA: "North America", SA: "South America", OC: "Oceania", AN: "Antarctica", OCEAN: "the oceans" };
+function whereText(w) { const land = w.filter(c => c !== "OCEAN"); return land.length >= 6 ? "Almost everywhere" : land.length ? land.map(c => CONT_NAMES[c]).join(", ") + (w.includes("OCEAN") ? " and the oceans" : "") : "The oceans"; }
+function continentMap(w) {
+  const keys = Object.keys(CONTINENTS).filter(k => k !== "AN" || w.includes("AN"));
+  return `<svg class="map-svg cont${w.includes("OCEAN") ? " sea-on" : ""}" viewBox="-170 ${w.includes("AN") ? -80 : -80} 340 ${w.includes("AN") ? 165 : 140}" preserveAspectRatio="xMidYMid meet">${keys.map(k => `<path class="${w.includes(k) ? "on" : ""}" d="${CONTINENTS[k]}"/>`).join("")}</svg>`;
+}
 // A dot on a blank world map (equirectangular; the world outline comes from the cities pack).
 let WORLD_PATH = "";
 function dotMap(lon, lat, w = 90, h = 56) {
