@@ -12,9 +12,10 @@ const DIFF_NOTES = {
   mixed: "A random difficulty each round",
 };
 const DIFF_MULT = { supereasy: 0.8 };
+const ROUND_STEPS = [5, 10, 15, 20, 30, 0];   // 0 = endless
 const MAX_WRONG = 3, PENALTY = 10, LIVES = 3, DAILY_COUNT = 5, MAX_SKIPS = 3, MIN_POOL = 10, DAILY_SEC = 15;
-const STREAK_BADGES = { 3: "Hat-trick", 5: "On a roll", 10: "Box office hit" };
-const NICKS = ["Front Row Fan", "Golden Reel", "Plot Twister", "Midnight Critic", "Silver Screen", "Box Office Bandit", "Quiz Royalty", "Popcorn Pro", "Trivia Titan", "Scene Stealer"];
+const STREAK_BADGES = { 3: "Hat-trick", 5: "On a roll", 10: "Showstopper" };
+const NICKS = ["Front Row Fan", "Quick Guesser", "Plot Twister", "Midnight Quizzer", "Clue Hunter", "Trivia Bandit", "Quiz Royalty", "Popcorn Pro", "Trivia Titan", "Scene Stealer"];
 const POP_MIN = { easy: 0.55, medium: 0.25 };
 
 // ================= storage =================

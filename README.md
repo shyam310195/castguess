@@ -1,12 +1,12 @@
-# CastGuess
+# Guess Night
 
-See the cast. Name the film. A phone-first movie guessing game for Hollywood and Bollywood fans.
+A free, phone-first guessing game for solo play or party nights. Four clues per round across four categories: **Movies**, **TV shows**, **Countries** and **Brands**. Mix them for a party, pick 5 to 30 rounds or play endless, and guess by typing or out loud.
 
 **Play:** https://shyam310195.github.io/castguess/
 
-- Four clues per film: three actor photos, a fourth face, their names, then the plot.
-- Solo endless with lives and streaks, a daily challenge, and party mode for the whole room.
-- Optional hands-free voice guessing (Chrome or Safari).
+The original movies-only game, CastGuess, is still available at https://shyam310195.github.io/castguess/classic/
 
-Film data and images from The Movie Database (TMDB).
-This product uses the TMDB API but is not endorsed or certified by TMDB.
+## Credits
+- Film and TV data and images: [The Movie Database (TMDB)](https://www.themoviedb.org/). This product uses the TMDB API but is not endorsed or certified by TMDB.
+- Country outlines: [Natural Earth](https://www.naturalearthdata.com/) (public domain). Country facts: [mledoze/countries](https://github.com/mledoze/countries) (ODbL). Flags: [flag-icons](https://github.com/lipis/flag-icons) (MIT).
+- Brand colours are approximations; no logos are used.

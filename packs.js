@@ -77,7 +77,7 @@ const PACK_DEFS = {
     acts: [
       { n: "Episode 1", name: "The cast", hint: "Three regulars. One show." },
       { n: "Episode 2", name: "One more face", hint: "A familiar face joins." },
-      { n: "Episode 3", name: "Names & seasons", hint: "Who they are, and how long it ran." },
+      { n: "Episode 3", name: "The names", hint: "Who they are, and how long it ran." },
       { n: "Finale", name: "The premise", hint: "Last chance. Read the premise." },
     ],
     partial: "Right franchise", nearText: "Right universe, different show",
@@ -103,9 +103,9 @@ const PACK_DEFS = {
     filter: { label: "Continents", options: [["africa", "Africa"], ["americas", "Americas"], ["asia", "Asia"], ["europe", "Europe"], ["oceania", "Oceania"]] },
     years: false,
     acts: [
-      { n: "Clue 1", name: "The outline", hint: "Just the shape. No labels." },
-      { n: "Clue 2", name: "On the map", hint: "Its neighbours, region and population." },
-      { n: "Clue 3", name: "Daily life", hint: "Languages, money and what it's famous for." },
+      { n: "Clue 1", name: "The shape", hint: "Just the outline. No labels." },
+      { n: "Clue 2", name: "The neighbourhood", hint: "Its neighbours, region and population." },
+      { n: "Clue 3", name: "The facts", hint: "Languages, money and what it's famous for." },
       { n: "Clue 4", name: "The flag", hint: "Last clue. Fly the flag." },
     ],
     partial: null, nearText: "That's a neighbour. Look across the border",
@@ -133,8 +133,8 @@ const PACK_DEFS = {
     acts: [
       { n: "Clue 1", name: "The colours", hint: "Its colours and what it does." },
       { n: "Clue 2", name: "The slogan", hint: "Name blanked out." },
-      { n: "Clue 3", name: "The origin story", hint: "When, where and who." },
-      { n: "Clue 4", name: "Famous for", hint: "Last clue. Its best-known product." },
+      { n: "Clue 3", name: "The story", hint: "When, where and who." },
+      { n: "Clue 4", name: "The product", hint: "Last clue. Its best-known product." },
     ],
     partial: null, nearText: "Same parent company, different brand",
     practice: ["Coca-Cola", "Tata"],

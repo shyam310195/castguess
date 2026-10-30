@@ -66,10 +66,9 @@ function renderMode() {
   $("#pCatNote").textContent = pp.cat === "mixed" ? `Every round picks a category at random: ${ready.map(catName).join(", ")}.` : `Every round is ${catName(pp.cat).toLowerCase()}. Uses your ${catName(pp.cat)} filters.`;
   $$("#pStyle button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === pp.style)));
   $("#pStyleNote").textContent = pp.style === "shout" ? "One screen, everyone plays at once. Shout the answer. When it's right, tap who said it. Turn on hands-free voice and the app hears it for you." : "Pass the phone. Each player gets their own round in turn, scored like solo.";
-  const opts = pp.style === "shout" ? [[5, "5 rounds"], [10, "10 rounds"], [15, "15 rounds"]] : [[2, "2 each"], [3, "3 each"], [5, "5 each"]];
-  if (!opts.some(([v]) => v === pp.films)) pp.films = opts[1][0];
-  $("#pFilmsLabel").textContent = pp.style === "shout" ? "How many rounds?" : "Rounds per player";
-  $("#pFilms").innerHTML = opts.map(([v, l]) => `<button data-v="${v}" aria-pressed="${v === pp.films}">${l}</button>`).join("");
+  if (pp.rounds === undefined) pp.rounds = pp.films || 10;
+  setRounds($("#pRounds"), pp.rounds, "How many rounds?");
+  $("#pRoundsNote").textContent = pp.rounds ? (pp.style === "turns" ? `Turns rotate between players. ${pp.rounds} rounds in total.` : "") : "Endless: play until you tap End game after any round.";
   $$("#pDiff button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === DB.prefs.difficulty)));
   $("#startParty").textContent = `Start party game · ${pp.count} players`;
 }
@@ -79,7 +78,19 @@ $("#pPlus").addEventListener("click", () => { DB.prefs.party.count = Math.min(8,
 $("#pNames").addEventListener("input", e => { const i = e.target.dataset.pi; if (i == null) return; DB.prefs.party.names[+i] = e.target.value; save(); });
 $("#pCats").addEventListener("click", e => { const b = e.target.closest("button[data-v]"); if (!b) return; DB.prefs.party.cat = b.dataset.v; save(); renderMode(); });
 $("#pStyle").addEventListener("click", e => { const b = e.target.closest("button[data-v]"); if (!b) return; DB.prefs.party.style = b.dataset.v; save(); renderMode(); });
-$("#pFilms").addEventListener("click", e => { const b = e.target.closest("button[data-v]"); if (!b) return; DB.prefs.party.films = +b.dataset.v; save(); renderMode(); });
+// ----- rounds slider (party setup + category home) -----
+function setRounds(box, val, label) {
+  const i = Math.max(0, ROUND_STEPS.indexOf(val));
+  box.querySelector("[data-rr]").value = i; box.querySelector("[data-rl]").textContent = label;
+  box.querySelector("[data-rv]").textContent = val ? `${val} rounds` : "Endless";
+  box.querySelector("[data-rf]").style.right = `${100 - (100 * i / 5)}%`;
+}
+$("#pRounds [data-rr]").addEventListener("input", e => { DB.prefs.party.rounds = ROUND_STEPS[+e.target.value]; save(); renderMode(); });
+$("#homeRounds [data-rr]").addEventListener("input", e => { const id = DB.prefs.cat; packPrefs(id).rounds = ROUND_STEPS[+e.target.value]; save(); renderHomeRounds(); });
+function renderHomeRounds() {
+  const pp = packPrefs(DB.prefs.cat); if (pp.rounds === undefined) pp.rounds = 0;
+  setRounds($("#homeRounds"), pp.rounds, pp.rounds ? "Rounds" : "Rounds · endless, with 3 lives");
+}
 $("#pDiff").addEventListener("click", e => { const b = e.target.closest("button[data-v]"); if (!b) return; DB.prefs.difficulty = b.dataset.v; save(); renderMode(); });
 $("#startParty").addEventListener("click", () => {
   sfx.unlock(); const c = DB.prefs.party.cat;
@@ -110,7 +121,7 @@ async function goHome() {
   $("#dailyCard").innerHTML = done
     ? `<span class="cal">${dailyNumber()}</span><span><strong>${esc(def.name)} daily #${dailyNumber()} done · ${done.results.filter(r => r.won).length}/${DAILY_COUNT}</strong><small>See your result and share it</small></span>`
     : `<span class="cal">${dailyNumber()}</span><span><strong>${esc(def.name)} daily #${dailyNumber()}</strong><small>5 ${def.units}, same for everyone · 15 sec per clue</small></span>`;
-  updateCounts(); syncVoiceUI();
+  updateCounts(); syncVoiceUI(); renderHomeRounds();
   show("homeScreen");
 }
 $("#homeFilters").addEventListener("click", e => {

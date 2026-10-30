@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0C1428" />
   <meta name="color-scheme" content="dark" />
-  <title>CastGuess</title>
+  <title>Guess Night</title>
+  <link rel="icon" href="data:," />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -16,323 +17,30 @@
       gc.dataset.goatcounter = "https://shyam3101.goatcounter.com/count"; document.head.appendChild(gc);
     }
   </script>
-  <style>
-    :root {
-      --bg: #0C1428; --s1: #131D38; --s2: #1B2745; --b1: #2A3654; --b2: #3A4766;
-      --gold: #E2C27A; --gold-h: #F1D9A0; --text: #F4EFE4; --muted: #B9B3A6; --dim: #8E97AE; --coral: #F08A6C;
-      --serif: 'Playfair Display', Georgia, serif; --sans: 'DM Sans', system-ui, -apple-system, sans-serif;
-    }
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
-    button, input { font: inherit; color: inherit; }
-    button { cursor: pointer; }
-    button:disabled { cursor: default; }
-    [hidden] { display: none !important; }
-    :focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
-    a { color: var(--gold); }
-
-    #app { max-width: 480px; margin: 0 auto; min-height: 100dvh; padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; }
-    .screen { display: none; flex: 1; flex-direction: column; gap: 18px; min-height: 0; }
-    .screen.active { display: flex; animation: fade 260ms ease both; }
-    @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-
-    /* ---------- shared bits ---------- */
-    .label { font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
-    .label.gold { color: var(--gold); letter-spacing: 3px; }
-    .serif { font-family: var(--serif); }
-    .title { font-family: var(--serif); font-weight: 700; line-height: 1.05; margin: 0; }
-    .btn { height: 56px; border-radius: 999px; border: 0; padding: 0 24px; font-weight: 700; font-size: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-    .btn.primary { background: var(--gold); color: var(--bg); }
-    .btn.primary:hover { background: var(--gold-h); }
-    .btn.primary:disabled { opacity: .45; }
-    .btn.ghost { background: transparent; border: 1px solid var(--b1); color: var(--text); font-weight: 600; }
-    .btn.text { background: transparent; color: var(--gold); height: 44px; font-weight: 600; font-size: 14px; }
-    .btn.wide { width: 100%; }
-    .icon-btn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--b1); background: transparent; color: #C9C3B6; display: grid; place-items: center; flex: 0 0 auto; }
-    .chip { height: 44px; padding: 0 12px; white-space: nowrap; border-radius: 999px; border: 1.5px solid var(--b2); background: transparent; color: var(--text); font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
-    .chip[aria-pressed="true"] { background: var(--gold); border-color: var(--gold); color: var(--bg); font-weight: 700; }
-    .chip .tick { display: none; }
-    .chip[aria-pressed="true"] .tick { display: inline; }
-    .chip:disabled { border-style: dashed; color: var(--dim); }
-    .seg { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--b1); border-radius: 14px; overflow: hidden; }
-    .seg.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .seg button { height: 44px; border: 0; background: transparent; color: var(--text); font-weight: 600; font-size: 14px; }
-    .seg button[aria-pressed="true"] { background: var(--s2); color: var(--gold); font-weight: 700; }
-    .row { display: flex; align-items: center; gap: 10px; }
-    .spacer { flex: 1; }
-    .muted { color: var(--muted); }
-    .card { background: var(--s1); border: 1px solid var(--b1); border-radius: 18px; padding: 16px; }
-    .stars { display: flex; gap: 6px; align-items: center; }
-    .star { width: 16px; height: 16px; }
-    .star.lost path { fill: none; stroke: var(--b2); stroke-width: 1.5; }
-    .divider { border-top: 1px solid var(--b1); }
-
-    /* ---------- onboarding ---------- */
-    .ob-top { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
-    .dots { display: flex; gap: 6px; }
-    .dots i { width: 22px; height: 3px; border-radius: 3px; background: var(--b1); }
-    .dots i.on { background: var(--gold); }
-    .ob-q { font-family: var(--serif); font-size: 32px; font-weight: 700; line-height: 1.1; margin: 8px 0 0; }
-    .ob-sub { color: var(--muted); font-size: 15px; margin: 0; line-height: 1.5; }
-    .choice { width: 100%; min-height: 88px; text-align: left; border-radius: 18px; border: 1.5px solid var(--b1); background: var(--s1); padding: 16px 18px; display: flex; align-items: center; gap: 14px; }
-    .choice[aria-pressed="true"] { border-color: var(--gold); background: var(--s2); }
-    .choice strong { display: block; font-size: 17px; }
-    .choice small { display: block; color: var(--muted); font-size: 13px; margin-top: 3px; line-height: 1.4; }
-    .choice .check { margin-left: auto; width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--b2); display: grid; place-items: center; flex: 0 0 auto; color: var(--bg); }
-    .choice[aria-pressed="true"] .check { background: var(--gold); border-color: var(--gold); }
-    .choice .emblem { width: 44px; height: 44px; border-radius: 12px; background: var(--s2); display: grid; place-items: center; color: var(--gold); flex: 0 0 auto; }
-    .name-row { display: flex; gap: 8px; }
-    .text-input { flex: 1; min-width: 0; height: 56px; border-radius: 999px; border: 1px solid var(--b2); background: var(--s1); color: var(--text); padding: 0 20px; font-size: 17px; outline: none; }
-    .text-input:focus { border-color: var(--gold); }
-
-    /* ---------- home ---------- */
-    .faces { display: flex; justify-content: center; }
-    .faces img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; object-position: 50% 20%; border: 2px solid var(--gold); filter: grayscale(1); background: var(--s2); }
-    .faces img + img { margin-left: -18px; }
-    .daily-card { width: 100%; text-align: left; display: flex; align-items: center; gap: 14px; border-radius: 18px; border: 1px solid var(--gold); background: linear-gradient(135deg, rgba(226,194,122,.14), rgba(226,194,122,.03)); padding: 14px 16px; min-height: 64px; color: var(--text); }
-    .daily-card strong { display: block; font-size: 15px; }
-    .daily-card small { color: var(--muted); font-size: 13px; }
-    .daily-card .cal { width: 40px; height: 40px; border-radius: 10px; background: var(--gold); color: var(--bg); display: grid; place-items: center; font-weight: 700; font-family: var(--serif); font-size: 18px; flex: 0 0 auto; }
-    .home-foot { display: flex; align-items: center; gap: 14px; font-size: 13px; color: var(--muted); }
-    .home-foot b { color: var(--text); }
-    .link-btn { background: none; border: 0; color: var(--gold); font-weight: 600; font-size: 13px; padding: 12px 0; }
-
-    /* ---------- game ---------- */
-    .hud { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .hud-score { text-align: right; }
-    .hud-score b { display: block; font-size: 18px; }
-    .hud-score small { font-size: 11px; color: var(--muted); }
-    .act-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .act-title { font-family: var(--serif); font-size: 25px; font-weight: 600; }
-    .act-title em { color: var(--gold); }
-    .ring { position: relative; width: 48px; height: 48px; flex: 0 0 auto; }
-    .ring svg { transform: rotate(-90deg); }
-    .ring .track { stroke: var(--b1); }
-    .ring .prog { stroke: var(--gold); transition: stroke 200ms; }
-    .ring span { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--gold); }
-    .ring.low .prog { stroke: var(--coral); }
-    .ring.low span { color: var(--coral); animation: pulse 1s ease infinite; }
-    @keyframes pulse { 50% { transform: scale(1.18); } }
-    .bars { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-    .bars i { height: 3px; background: var(--b1); position: relative; overflow: hidden; }
-    .bars i b { position: absolute; inset: 0; background: var(--gold); transform-origin: left; transform: scaleX(0); }
-    .worth { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; }
-    .worth b { color: var(--gold); font-size: 15px; }
-
-    .cast { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 14px; }
-    .actor { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-    .actor .ph { height: clamp(128px, 24dvh, 214px); border-radius: 4px; overflow: hidden; outline: 1px solid var(--gold); outline-offset: 4px; background: var(--s1); }
-    .actor .ph img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; display: block; }
-    .actor .nm { font-size: 13px; line-height: 1.25; text-align: center; opacity: 0; transform: translateY(8px); transition: opacity 380ms ease, transform 380ms ease; min-height: 16px; }
-    .cast.names .nm { opacity: 1; transform: none; }
-    .actor.extra .nm { color: var(--gold); }
-    .actor.flip { animation: flipIn 520ms cubic-bezier(.2,.8,.3,1) both; }
-    @keyframes flipIn { from { transform: perspective(700px) rotateY(85deg); opacity: 0; } to { transform: none; opacity: 1; } }
-    .actor.spot .ph { animation: spot 1.6s ease both; }
-    @keyframes spot { 0% { box-shadow: 0 0 0 0 rgba(226,194,122,0); } 25% { box-shadow: 0 0 40px 10px rgba(226,194,122,.55); } 100% { box-shadow: 0 0 0 0 rgba(226,194,122,0); } }
-    .locked .ph { outline: 0; border: 1px dashed var(--b2); background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--muted); text-align: center; }
-    .locked .ph em { font-family: var(--serif); font-size: 16px; color: var(--text); }
-    .locked .ph small { font-size: 12px; }
-    .cast.compact { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-    .cast.compact .ph { height: 104px; outline-offset: 3px; }
-    .cast.compact .nm { font-size: 11.5px; text-align: left; }
-    .synopsis { border-top: 1px solid var(--b1); border-bottom: 1px solid var(--b1); padding: 14px 4px; display: flex; flex-direction: column; gap: 8px; }
-    .synopsis p { margin: 0; font-family: var(--serif); font-style: italic; font-size: 18px; line-height: 1.45; min-height: 52px; }
-    .tried { font-size: 13px; color: var(--muted); }
-    .tried s { color: var(--coral); margin-left: 6px; }
-
-    .guess-area { margin-top: auto; display: flex; flex-direction: column; gap: 8px; position: relative; }
-    .heard:empty, .feedback:empty { min-height: 0; display: none; }
-    .feedback { min-height: 18px; font-size: 13px; text-align: center; color: var(--muted); }
-    .feedback.bad { color: var(--coral); }
-    .feedback.near { color: var(--gold); font-weight: 600; }
-    .guess-row { display: flex; gap: 8px; position: relative; }
-    .guess-row .text-input.shake { animation: shake 380ms ease; border-color: var(--coral); }
-    @keyframes shake { 20%, 60% { transform: translateX(-7px); } 40%, 80% { transform: translateX(7px); } }
-    .sugg { position: absolute; left: 0; right: 0; bottom: calc(100% + 8px); border-radius: 18px; background: var(--s1); border: 1px solid var(--b1); overflow: hidden; z-index: 5; box-shadow: 0 -16px 40px rgba(0,0,0,.45); }
-    .sugg button { width: 100%; display: flex; justify-content: space-between; gap: 10px; text-align: left; padding: 13px 18px; border: 0; border-bottom: 1px solid #1F2A47; background: transparent; font-size: 15px; min-height: 46px; }
-    .sugg button:last-child { border-bottom: 0; }
-    .sugg button:hover, .sugg button:focus-visible { background: var(--s2); color: var(--gold); }
-    .sugg span { color: var(--dim); flex: 0 0 auto; }
-    .hint-line { font-size: 12px; color: var(--muted); text-align: center; }
-    .float { position: absolute; right: 90px; top: -6px; color: var(--coral); font-weight: 700; font-size: 18px; pointer-events: none; animation: floatUp 1s ease forwards; }
-    @keyframes floatUp { to { transform: translateY(-46px); opacity: 0; } }
-    .coach { border: 1px solid var(--gold); background: var(--s2); border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; animation: fade 300ms ease both; }
-    .coach p { margin: 0; font-size: 15px; line-height: 1.5; }
-    .coach .row .label { font-size: 11px; }
-
-    /* ---------- reveal ---------- */
-    #revealScreen { align-items: center; text-align: center; gap: 14px; }
-    .poster-wrap { position: relative; margin-top: 4px; perspective: 900px; }
-    .poster { height: clamp(160px, 28dvh, 276px); width: auto; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 4px; outline: 1px solid var(--gold); outline-offset: 6px; display: block; background: var(--s1); }
-    .poster.flip { animation: posterFlip 700ms cubic-bezier(.2,.8,.3,1) both; }
-    @keyframes posterFlip { from { transform: rotateY(-100deg); opacity: 0; } to { transform: none; opacity: 1; } }
-    .poster.miss { filter: grayscale(1) brightness(.75); outline-color: var(--b2); }
-    .shimmer { position: absolute; inset: 0; overflow: hidden; border-radius: 4px; pointer-events: none; }
-    .shimmer::after { content: ""; position: absolute; top: 0; bottom: 0; width: 60%; left: -80%; background: linear-gradient(100deg, transparent, rgba(241,217,160,.55), transparent); animation: sweep 1.1s 500ms ease forwards; }
-    @keyframes sweep { to { left: 130%; } }
-    .tier { font-family: var(--serif); font-style: italic; font-size: 20px; color: var(--gold); }
-    .tier.miss { color: var(--muted); }
-    .breakdown { width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--b1); border-bottom: 1px solid var(--b1); padding: 12px 0; }
-    .breakdown b { display: block; font-size: 18px; }
-    .breakdown small { font-size: 11px; color: var(--muted); }
-    .big-pts { font-family: var(--serif); font-size: 46px; font-weight: 700; color: var(--gold); line-height: 1; }
-    .badge { display: inline-flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--gold); background: var(--s2); animation: popBadge 600ms cubic-bezier(.2,.9,.3,1.4) both; }
-    .badge b { font-family: var(--serif); font-size: 17px; color: var(--gold); }
-    @keyframes popBadge { from { transform: scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
-    .star.drop { animation: drop 900ms 400ms ease-in forwards; }
-    @keyframes drop { to { transform: translateY(40px) rotate(70deg); opacity: 0; } }
-    .btn.big { height: 70px; font-size: 20px; position: relative; overflow: hidden; }
-    .btn.big .lbl { position: relative; z-index: 1; }
-    .btn.big .fillbar { position: absolute; inset: 0; background: rgba(12,20,40,.22); transform-origin: left; transform: scaleX(0); }
-    .btn.big.auto .fillbar { animation: fillbar 3s linear forwards; }
-    @keyframes fillbar { to { transform: scaleX(1); } }
-    .rev-cta { position: sticky; bottom: 0; margin-top: auto; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 14px 0 max(4px, env(safe-area-inset-bottom)); background: linear-gradient(180deg, rgba(12,20,40,0), var(--bg) 22%); z-index: 3; }
-    .stay { background: none; border: 0; color: var(--muted); font-size: 13px; text-decoration: underline; min-height: 40px; padding: 0 12px; }
-    .starring { font-size: 13px; color: var(--muted); line-height: 1.55; }
-    .starring b { color: var(--text); font-weight: 600; }
-
-    /* ---------- awards / daily / stats ---------- */
-    .trophy { color: var(--gold); }
-    .award { border: 1px solid var(--gold); border-radius: 18px; padding: 16px; background: linear-gradient(135deg, rgba(226,194,122,.18), rgba(226,194,122,.02)); text-align: center; animation: popBadge 700ms cubic-bezier(.2,.9,.3,1.3) both; }
-    .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-    .stat { background: var(--s1); border: 1px solid var(--b1); border-radius: 16px; padding: 12px 14px; }
-    .stat small { display: block; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
-    .stat b { font-size: 24px; font-family: var(--serif); }
-    .list-line { font-size: 14px; line-height: 1.6; color: var(--muted); }
-    .list-line b { color: var(--text); font-weight: 600; }
-    .squares { display: flex; gap: 8px; justify-content: center; }
-    .squares i { width: 48px; height: 48px; border-radius: 10px; display: grid; place-items: center; font-style: normal; font-weight: 700; font-size: 15px; }
-    .sq1 { background: var(--gold); color: var(--bg); }
-    .sq2 { background: #C7A964; color: var(--bg); }
-    .sq3 { background: #8C7A52; color: var(--text); }
-    .sq4 { background: #5A5240; color: var(--text); }
-    .sq0 { background: var(--s1); border: 1px solid var(--b2); color: var(--dim); }
-    .share-box { white-space: pre-line; font-size: 15px; line-height: 1.5; background: var(--s1); border: 1px dashed var(--b2); border-radius: 14px; padding: 14px 16px; text-align: left; }
-    .bar-row { display: grid; grid-template-columns: 96px 1fr 52px; align-items: center; gap: 10px; font-size: 14px; }
-    .bar-row .track { height: 8px; border-radius: 8px; background: var(--s2); overflow: hidden; }
-    .bar-row .track b { display: block; height: 100%; background: var(--gold); border-radius: 8px; }
-
-    /* ---------- settings ---------- */
-    .set-group { display: flex; flex-direction: column; gap: 10px; }
-    .toggle-row { display: flex; align-items: center; justify-content: space-between; min-height: 52px; border-bottom: 1px solid var(--b1); font-size: 15px; }
-    .switch { width: 52px; height: 32px; border-radius: 999px; border: 0; background: var(--b2); position: relative; flex: 0 0 auto; }
-    .switch::after { content: ""; position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 50%; background: var(--text); transition: transform 200ms; }
-    .switch[aria-checked="true"] { background: var(--gold); }
-    .switch[aria-checked="true"]::after { transform: translateX(20px); background: var(--bg); }
-    .set-group .text-input { flex: none; }
-    .range { position: relative; height: 44px; }
-    .range .rail { position: absolute; left: 14px; right: 14px; top: 20px; height: 4px; border-radius: 4px; background: var(--b1); }
-    .range .fill { position: absolute; top: 0; bottom: 0; background: var(--gold); border-radius: 4px; }
-    .range input[type=range] { position: absolute; left: 0; right: 0; top: 8px; width: 100%; height: 28px; margin: 0; background: none; pointer-events: none; -webkit-appearance: none; appearance: none; }
-    .range input[type=range]::-webkit-slider-runnable-track { background: none; }
-    .range input[type=range]::-webkit-slider-thumb { pointer-events: auto; -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: var(--gold); border: 4px solid var(--bg); box-shadow: 0 0 0 1px var(--gold); cursor: pointer; }
-    .range input[type=range]::-moz-range-thumb { pointer-events: auto; width: 22px; height: 22px; border-radius: 50%; background: var(--gold); border: 4px solid var(--bg); cursor: pointer; }
-    .range input[type=range]::-moz-range-track { background: none; }
-    .yp { display: flex; flex-direction: column; gap: 8px; }
-    .yp-head { display: flex; justify-content: space-between; align-items: baseline; }
-    .yp-head b { font-family: var(--serif); font-size: 20px; }
-    .presets { display: flex; flex-wrap: wrap; gap: 6px; }
-    .presets .chip { font-size: 13px; padding: 0 12px; }
-    .match { font-size: 13px; color: var(--muted); }
-    .match.low { color: var(--coral); }
-    .collapse-row { width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: transparent; border: 1px solid var(--b1); border-radius: 14px; padding: 0 14px; color: var(--text); font-weight: 600; font-size: 14px; }
-    .collapse-row .chev { transition: transform 200ms; color: var(--gold); }
-    .collapse-row[aria-expanded="true"] .chev { transform: rotate(180deg); }
-    #setLang button { font-size: 12.5px; padding: 0 2px; }
-    .credit { font-size: 12px; color: var(--dim); line-height: 1.5; }
-
-    /* ---------- overlays ---------- */
-    .overlay { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(12,20,40,.94); }
-    .countdown { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-    .countdown .num { font-family: var(--serif); font-size: 120px; font-weight: 700; line-height: 1; color: var(--text); }
-    .countdown .num.action { font-style: italic; color: var(--gold); font-size: 72px; }
-    .countdown .num.go { animation: zoom 520ms ease both; }
-    @keyframes zoom { from { transform: scale(1.6); opacity: 0; } to { transform: none; opacity: 1; } }
-    .slate { color: var(--gold); }
-    .sheet-bg { position: fixed; inset: 0; z-index: 45; background: rgba(5,9,20,.75); display: flex; align-items: flex-end; justify-content: center; }
-    .sheet { width: 100%; max-width: 480px; max-height: 86dvh; overflow: auto; background: var(--s1); border: 1px solid var(--b1); border-bottom: 0; border-radius: 24px 24px 0 0; padding: 24px 20px max(24px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 14px; animation: up 260ms ease both; }
-    @keyframes up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
-    .sheet ol { margin: 0; padding-left: 20px; line-height: 1.6; color: #DCD6C9; font-size: 15px; }
-    .toast { position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 50; background: var(--s2); border: 1px solid var(--b2); color: var(--text); padding: 12px 18px; border-radius: 999px; font-size: 14px; max-width: calc(100% - 40px); text-align: center; animation: fade 220ms ease both; }
-    #confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; }
-    .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-
-    .seg.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-    .seg.five button { font-size: 13px; line-height: 1.1; padding: 0 2px; }
-    .diff-note { font-size: 12.5px; color: var(--muted); }
-    .seg.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .party-setup { display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--b1); border-radius: 18px; padding: 14px; background: var(--s1); }
-    .stepper { display: flex; align-items: center; gap: 10px; }
-    .stepper b { min-width: 28px; text-align: center; font-family: var(--serif); font-size: 22px; }
-    .pnames { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-    .pname { display: flex; align-items: center; gap: 8px; height: 44px; border-radius: 999px; border: 1px solid var(--b2); background: var(--bg); padding: 0 6px 0 12px; }
-    .pname input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text); font-size: 15px; outline: none; height: 100%; }
-    .pname:focus-within { border-color: var(--gold); }
-    .dot { width: 12px; height: 12px; border-radius: 50%; flex: 0 0 auto; }
-    .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; border: 1px solid var(--b1); border-radius: 14px; padding: 0 14px; font-size: 14px; font-weight: 600; }
-    .switch-row small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
-    .mic { width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--b2); background: var(--s1); color: var(--muted); display: grid; place-items: center; flex: 0 0 auto; position: relative; }
-    .mic.on { border-color: var(--gold); color: var(--gold); }
-    .mic.on::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--gold); opacity: .6; animation: ping 1.4s ease-out infinite; }
-    @keyframes ping { from { transform: scale(.85); opacity: .7; } to { transform: scale(1.25); opacity: 0; } }
-    .heard { font-size: 13px; color: var(--muted); text-align: center; min-height: 18px; display: flex; align-items: center; justify-content: center; gap: 6px; }
-    .heard.live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); animation: pulse 1s ease infinite; }
-    .heard button { background: none; border: 1px solid var(--gold); color: var(--gold); border-radius: 999px; padding: 8px 14px; font-weight: 600; font-size: 13px; min-height: 36px; }
-    .who-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-    #reportReasons button { min-height: 48px; font-size: 15px; font-weight: 600; justify-content: flex-start; padding: 8px 16px; }
-    #reportReasons button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
-    .who-list button { min-height: 64px; border-radius: 16px; border: 1.5px solid var(--b2); background: var(--s2); color: var(--text); font-weight: 700; font-size: 17px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 8px; }
-    .board { width: 100%; display: flex; flex-direction: column; gap: 6px; text-align: left; }
-    .board .bro { display: grid; grid-template-columns: 22px 14px 1fr auto 44px; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; background: var(--s1); font-size: 14px; animation: fade 300ms ease both; }
-    .board .bro.lead { border: 1px solid var(--gold); }
-    .board .rank { color: var(--muted); font-weight: 700; }
-    .board .chg { font-size: 12px; font-weight: 700; text-align: right; }
-    .board .up { color: #8FD19E; } .board .down { color: var(--coral); }
-    .podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 8px; text-align: center; }
-    .podium .col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-    .podium .blk { width: 100%; border-radius: 10px 10px 0 0; background: var(--s2); border: 1px solid var(--b1); display: grid; place-items: center; font-family: var(--serif); font-size: 26px; color: var(--gold); animation: rise 700ms cubic-bezier(.2,.8,.3,1) both; transform-origin: bottom; }
-    @keyframes rise { from { transform: scaleY(0); } to { transform: none; } }
-    .podium .nm { font-weight: 700; font-size: 15px; }
-    .awards-list { display: grid; gap: 8px; }
-    .awards-list div { display: flex; justify-content: space-between; gap: 10px; padding: 10px 14px; border-radius: 12px; background: var(--s1); border: 1px solid var(--b1); font-size: 14px; }
-    .awards-list b { color: var(--gold); font-family: var(--serif); font-style: italic; font-weight: 600; }
-    body.rm *, body.rm *::before, body.rm *::after { animation: none !important; transition: none !important; }
-  </style>
+  <link rel="stylesheet" href="styles.css?v=4.1" />
 </head>
 <body>
 <div id="app">
 
-  <!-- ===== ONBOARDING 1: industries ===== -->
+  <!-- ===== ONBOARDING 1: welcome ===== -->
   <section class="screen" id="ob1" aria-labelledby="ob1q">
     <div class="ob-top"><div class="dots" aria-hidden="true"><i class="on"></i><i></i><i></i></div><button class="link-btn" data-skip>Skip</button></div>
-    <div><div class="label gold">Welcome to CastGuess</div><h1 class="ob-q" id="ob1q">Which films do you watch?</h1></div>
-    <p class="ob-sub">Pick one or both. You can change this any time.</p>
-    <div style="display:flex;flex-direction:column;gap:12px">
-      <button class="choice" data-ind="hollywood" aria-pressed="true">
-        <span class="emblem"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 20.9l1.6-7L2 9.2l7.1-.6z"/></svg></span>
-        <span><strong>Hollywood</strong><small>Titanic, Inception, The Godfather…</small></span>
-        <span class="check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-      </button>
-      <button class="choice" data-ind="bollywood" aria-pressed="true">
-        <span class="emblem"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg></span>
-        <span><strong>Bollywood</strong><small>Dilwale Dulhania Le Jayenge, 3 Idiots, Dangal…</small></span>
-        <span class="check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-      </button>
-    </div>
+    <div><div class="label gold">Welcome to</div><h1 class="ob-q" id="ob1q" style="font-size:44px">Guess <em style="color:var(--gold)">Night</em></h1></div>
+    <p class="ob-sub">Four ways to play, one set of rules: four clues, guess any time, fewer clues means more points.</p>
+    <div class="cat-grid" id="obCats"></div>
     <button class="btn primary wide" id="ob1Next" style="margin-top:auto">Continue</button>
   </section>
 
   <!-- ===== ONBOARDING 2: level ===== -->
   <section class="screen" id="ob2" aria-labelledby="ob2q">
     <div class="ob-top"><div class="dots" aria-hidden="true"><i class="on"></i><i class="on"></i><i></i></div><button class="link-btn" data-skip>Skip</button></div>
-    <h1 class="ob-q" id="ob2q">How well do you know your movies?</h1>
-    <p class="ob-sub">This sets which actors we show you first.</p>
+    <h1 class="ob-q" id="ob2q">How hard should it be?</h1>
+    <p class="ob-sub">You can change this any time.</p>
     <div style="display:flex;flex-direction:column;gap:12px">
-      <button class="choice" data-level="supereasy"><span><strong>Just the hits</strong><small>Super easy · only the biggest blockbusters, lead actors first.</small></span></button>
-      <button class="choice" data-level="easy"><span><strong>Casual fan</strong><small>Start with the lead actors.</small></span></button>
-      <button class="choice" data-level="medium"><span><strong>Movie buff</strong><small>Two leads and one supporting actor.</small></span></button>
-      <button class="choice" data-level="hard"><span><strong>Film nerd</strong><small>Mostly the supporting cast. Good luck.</small></span></button>
+      <button class="choice" data-level="supereasy"><span><strong>Just the hits</strong><small>Super easy · only the most famous answers, extra guess.</small></span></button>
+      <button class="choice" data-level="easy"><span><strong>Casual</strong><small>Well-known answers with the clearest clues first.</small></span></button>
+      <button class="choice" data-level="medium"><span><strong>Buff</strong><small>A good mix of famous and less obvious.</small></span></button>
+      <button class="choice" data-level="hard"><span><strong>Nerd</strong><small>Everything, with the trickiest clues first.</small></span></button>
     </div>
   </section>
 
@@ -349,61 +57,82 @@
       </button>
     </div>
     <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px">
-      <button class="btn primary wide" id="obPractice">Try a practice film</button>
+      <button class="btn primary wide" id="obPractice">Try a practice round</button>
       <button class="btn text wide" id="obSkipPractice">Skip practice</button>
     </div>
   </section>
 
-  <!-- ===== HOME ===== -->
-  <section class="screen" id="homeScreen" aria-labelledby="homeTitle">
-    <div class="row"><div class="label gold">Tonight's screening</div><div class="spacer"></div>
+  <!-- ===== HUB ===== -->
+  <section class="screen" id="hubScreen" aria-labelledby="hubTitle">
+    <div class="row"><div class="label gold">Tonight's lineup</div><div class="spacer"></div>
       <button class="icon-btn" id="openSettings" aria-label="Settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
     </div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
-      <div class="faces" id="homeFaces"></div>
-      <h1 class="title" id="homeTitle" style="font-size:50px;text-align:center">Cast<em style="color:var(--gold)">Guess</em></h1>
-      <p class="muted" id="homeGreeting" style="margin:0;text-align:center;font-size:15px;max-width:290px;line-height:1.5">Three faces walk onto the screen. Name the film before the credits roll.</p>
+    <div style="text-align:center;display:flex;flex-direction:column;gap:8px">
+      <h1 class="title" id="hubTitle" style="font-size:50px">Guess <em style="color:var(--gold)">Night</em></h1>
+      <p class="muted" id="hubGreeting" style="margin:0;font-size:15px;line-height:1.5">Pick a category. Four clues. Name it before the curtain falls.</p>
     </div>
     <div class="seg two" id="modeSeg" role="group" aria-label="Game mode"><button data-v="solo">Solo</button><button data-v="party">Party</button></div>
+
+    <div class="cat-grid" id="catGrid"></div>
+
     <div class="party-setup" id="partySetup" hidden>
       <div class="row"><div class="label">How many players?</div><span class="spacer"></span>
         <div class="stepper"><button class="icon-btn" id="pMinus" aria-label="Remove a player">−</button><b id="pCount" aria-live="polite">3</b><button class="icon-btn" id="pPlus" aria-label="Add a player">+</button></div></div>
       <div class="pnames" id="pNames"></div>
+      <div class="label">What are we guessing?</div>
+      <div class="row" style="flex-wrap:wrap;gap:6px" id="pCats"></div>
+      <div class="muted" id="pCatNote" style="font-size:13px;line-height:1.5"></div>
       <div class="label">How do you play?</div>
       <div class="seg two" id="pStyle" role="group" aria-label="Party style"><button data-v="shout">Shout it out</button><button data-v="turns">Take turns</button></div>
       <div class="muted" id="pStyleNote" style="font-size:13px;line-height:1.5"></div>
-      <div class="label" id="pFilmsLabel">Films</div>
-      <div class="seg three" id="pFilms" role="group" aria-label="Number of films"></div>
+      <div id="pRounds"><div class="rounds-box" data-rounds><div class="yp-head"><span class="label" data-rl>Rounds</span><b data-rv>Endless</b></div>
+        <div class="range"><div class="rail"><div class="fill" data-rf style="left:0"></div></div><input type="range" min="0" max="5" step="1" data-rr aria-label="Number of rounds"></div>
+        <div class="rticks"><span>5</span><span>10</span><span>15</span><span>20</span><span>30</span><span>∞</span></div></div></div>
+      <div class="muted" id="pRoundsNote" style="font-size:13px"></div>
+      <div class="label">Difficulty</div>
+      <div class="seg five" id="pDiff" role="group" aria-label="Difficulty"><button data-v="supereasy">Super easy</button><button data-v="easy">Easy</button><button data-v="medium">Medium</button><button data-v="hard">Hard</button><button data-v="mixed">Mixed</button></div>
+      <div class="switch-row"><span id="lblPartyVoice">Hands-free voice<small>The app hears the right answer for you</small></span><button class="switch" role="switch" id="swPartyVoice" aria-labelledby="lblPartyVoice"></button></div>
+      <button class="btn primary wide" id="startParty">Start party game</button>
     </div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <div class="label">Films from</div>
-      <div class="row" style="flex-wrap:wrap;gap:6px" id="homeIndustries">
-        <button class="chip" data-ind="hollywood" aria-pressed="true"><svg class="tick" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Hollywood</button>
-        <button class="chip" data-ind="bollywood" aria-pressed="true"><svg class="tick" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Bollywood</button>
-        <button class="chip" disabled style="padding:0 10px;font-size:13px">More soon</button>
-      </div>
+
+    <div class="home-foot" style="margin-top:auto"><span id="hubRecords"></span><span class="spacer"></span><button class="link-btn" id="openAbout">About</button><button class="link-btn" data-howto>How to play</button></div>
+  </section>
+
+  <!-- ===== CATEGORY HOME ===== -->
+  <section class="screen" id="homeScreen" aria-labelledby="homeTitle">
+    <div class="back-row"><button class="icon-btn" data-hub aria-label="Back to all categories"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button><div class="label gold" id="homeKicker">Guess Night</div></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+      <div class="faces" id="homeFaces"></div>
+      <h1 class="title" id="homeTitle" style="font-size:44px;text-align:center"></h1>
+      <p class="muted" id="homeGreeting" style="margin:0;text-align:center;font-size:15px;max-width:300px;line-height:1.5"></p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px" id="homeFilterBox">
+      <div class="label" id="homeFilterLabel"></div>
+      <div class="row" style="flex-wrap:wrap;gap:6px" id="homeFilters"></div>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <div class="label">Difficulty</div>
-      <div class="seg five" id="homeDiff" role="group" aria-label="Difficulty">
-        <button data-v="supereasy">Super easy</button><button data-v="easy">Easy</button><button data-v="medium">Medium</button><button data-v="hard">Hard</button><button data-v="mixed">Mixed</button>
-      </div>
+      <div class="seg five" id="homeDiff" role="group" aria-label="Difficulty"><button data-v="supereasy">Super easy</button><button data-v="easy">Easy</button><button data-v="medium">Medium</button><button data-v="hard">Hard</button><button data-v="mixed">Mixed</button></div>
       <div class="diff-note" id="homeDiffNote"></div>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <div class="label">Time per clue</div>
       <div class="seg three" id="homeTime" role="group" aria-label="Time per clue"><button data-v="15">15 sec</button><button data-v="30">30 sec</button><button data-v="60">1 min</button></div>
     </div>
-    <div class="switch-row"><span id="lblHomeVoice">Hands-free voice<small id="homeVoiceNote">Say the film's name out loud to guess</small></span><button class="switch" role="switch" id="swHomeVoice" aria-labelledby="lblHomeVoice"></button></div>
-    <div style="display:flex;flex-direction:column;gap:10px">
+    <div class="switch-row"><span id="lblHomeVoice">Hands-free voice<small id="homeVoiceNote">Say your answer out loud to guess</small></span><button class="switch" role="switch" id="swHomeVoice" aria-labelledby="lblHomeVoice"></button></div>
+    <div style="display:flex;flex-direction:column;gap:10px" id="homeYearsBox">
       <button class="collapse-row" id="yearsToggle" aria-expanded="false" aria-controls="homeYears"><span>Years: <span id="yearsSummary" style="color:var(--gold)">All</span> <span class="match" id="homeMatchMini"></span></span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
       <div id="homeYears" class="yp" data-yp hidden></div>
     </div>
+    <div id="homeRounds"><div class="rounds-box" data-rounds><div class="yp-head"><span class="label" data-rl>Rounds</span><b data-rv>Endless</b></div>
+        <div class="range"><div class="rail"><div class="fill" data-rf style="left:0"></div></div><input type="range" min="0" max="5" step="1" data-rr aria-label="Number of rounds"></div>
+        <div class="rticks"><span>5</span><span>10</span><span>15</span><span>20</span><span>30</span><span>∞</span></div></div></div>
+    <div class="match" id="homeMatchLine"></div>
     <div style="display:flex;flex-direction:column;gap:10px;margin-top:auto">
       <button class="btn primary wide" id="startSolo">Start solo game</button>
       <button class="daily-card" id="dailyCard"></button>
     </div>
-    <div class="home-foot"><span id="homeRecords"></span><span class="spacer"></span><button class="link-btn" id="openStats">Stats</button><button class="link-btn" id="openHowTo">How to play</button></div>
+    <div class="home-foot"><span id="homeRecords"></span><span class="spacer"></span><button class="link-btn" id="openStats">Stats</button><button class="link-btn" data-howto>How to play</button></div>
   </section>
 
   <!-- ===== GAME ===== -->
@@ -416,38 +145,39 @@
     </div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <div class="act-row">
-        <div class="act-title" id="actTitle">Act I <em>· The faces</em></div>
+        <div class="act-title" id="actTitle">Act I</div>
         <div class="ring" id="ring" role="timer" aria-live="off">
           <svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true"><circle class="track" cx="24" cy="24" r="20" fill="none" stroke-width="3"/><circle class="prog" id="ringProg" cx="24" cy="24" r="20" fill="none" stroke-width="3" stroke-linecap="round" stroke-dasharray="125.66" stroke-dashoffset="0"/></svg>
           <span id="ringNum">15</span>
         </div>
       </div>
       <div class="bars" id="bars" aria-hidden="true"><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i></div>
-      <div class="worth"><span id="actHint">Three actors. One film.</span><span>Worth <b id="worthNum">150</b></span></div>
+      <div class="worth"><span id="actHint"></span><span>Worth <b id="worthNum">150</b></span></div>
     </div>
+    <div class="mix-chip" id="mixChip" hidden></div>
     <div class="cast" id="cast" aria-live="polite"></div>
-    <div class="synopsis" id="synopsis" hidden><div class="label gold">Synopsis</div><p id="synopsisText"></p></div>
+    <div class="info-cards" id="infoCards"></div>
     <div class="tried" id="tried" hidden></div>
     <div class="coach" id="coach" hidden><p id="coachText"></p><div class="row"><span class="label" id="coachStep"></span><span class="spacer"></span><button class="btn primary" id="coachNext" style="height:44px">Next</button></div></div>
     <div class="guess-area">
       <div class="heard" id="heard" aria-live="polite"></div>
       <div class="feedback" id="feedback" aria-live="polite"></div>
       <div class="guess-row">
-        <div class="sugg" id="sugg" hidden role="listbox" aria-label="Matching films"></div>
+        <div class="sugg" id="sugg" hidden role="listbox" aria-label="Matching answers"></div>
         <label for="guessInput" class="sr">Your answer</label>
-        <input id="guessInput" class="text-input" placeholder="Search any film" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" />
+        <input id="guessInput" class="text-input" placeholder="Search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" />
         <button class="mic" id="micBtn" aria-label="Turn on hands-free voice" aria-pressed="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
         <button class="btn primary" id="guessBtn" style="height:56px;padding:0 20px">Guess</button>
       </div>
       <div class="hint-line" id="hintLine">3 guesses left</div>
-      <div class="row"><button class="btn text" id="skipBtn" style="color:var(--muted);padding:0 4px">Skip film</button><span class="spacer"></span><button class="btn text" id="nextActBtn" style="padding:0 4px">Next act now</button></div>
+      <div class="row"><button class="btn text" id="skipBtn" style="color:var(--muted);padding:0 4px">Skip</button><span class="spacer"></span><button class="btn text" id="nextActBtn" style="padding:0 4px">Next clue now</button></div>
     </div>
   </section>
 
   <!-- ===== REVEAL ===== -->
   <section class="screen" id="revealScreen" aria-labelledby="revTitle">
     <div class="label gold">And the answer is</div>
-    <div class="poster-wrap"><img class="poster" id="revPoster" alt="" /><div class="shimmer" id="revShimmer" hidden></div></div>
+    <div class="poster-wrap" id="revVisual"><img class="poster" id="revPoster" alt="" /><div class="shimmer" id="revShimmer" hidden></div></div>
     <div class="tier" id="revTier"></div>
     <div style="display:flex;flex-direction:column;gap:4px"><h2 class="title" id="revTitle" style="font-size:34px"></h2><div class="muted" id="revMeta" style="font-size:14px"></div></div>
     <div class="breakdown" id="revBreak"></div>
@@ -456,10 +186,10 @@
     <div class="board" id="revBoard" hidden></div>
     <div class="stars" id="revLives" role="img" style="justify-content:center"></div>
     <div class="starring" id="revStarring"></div>
-    <button class="stay" id="reportBtn" style="font-size:12px">Report a problem with this film</button>
+    <button class="stay" id="reportBtn" style="font-size:12px">Report a problem with this one</button>
     <div class="rev-cta">
-      <button class="btn primary wide big" id="revNext"><span class="fillbar" aria-hidden="true"></span><span class="lbl" id="revNextLbl">Next film</span></button>
-      <button class="stay" id="revStay" hidden>Stay on this film</button>
+      <button class="btn primary wide big" id="revNext"><span class="fillbar" aria-hidden="true"></span><span class="lbl" id="revNextLbl">Next</span></button>
+      <div class="row" style="justify-content:center;gap:18px"><button class="stay" id="revStay" hidden>Stay on this one</button><button class="stay" id="revEnd">End game</button></div>
     </div>
   </section>
 
@@ -474,7 +204,7 @@
     </div>
     <div id="overAward"></div>
     <div class="grid2">
-      <div class="stat"><small>Films nailed</small><b id="overNailed">0</b></div>
+      <div class="stat"><small id="overNailedLabel">Nailed</small><b id="overNailed">0</b></div>
       <div class="stat"><small>Best streak</small><b id="overStreak">0</b></div>
     </div>
     <div class="list-line" id="overLists"></div>
@@ -501,42 +231,36 @@
 
   <!-- ===== DAILY RESULT ===== -->
   <section class="screen" id="dailyScreen" aria-labelledby="dailyTitle">
-    <div class="row"><button class="icon-btn" data-home aria-label="Back to home"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button><div class="label gold">Daily challenge</div></div>
+    <div class="row"><button class="icon-btn" data-home aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button><div class="label gold" id="dailyKicker">Daily challenge</div></div>
     <div style="text-align:center;display:flex;flex-direction:column;gap:6px"><h1 class="title" id="dailyTitle" style="font-size:36px"></h1><div class="muted" id="dailySub"></div></div>
     <div class="squares" id="dailySquares"></div>
     <div class="muted" style="font-size:12px;text-align:center">Gold = solved on the first clue. Darker = more clues needed. Empty = missed.</div>
     <div class="list-line" id="dailyFilms"></div>
     <div class="share-box" id="dailyShare"></div>
     <div style="margin-top:auto;display:flex;gap:8px"><button class="btn primary" id="dailyShareBtn" style="flex:1">Share</button><button class="btn ghost" id="dailyCopyBtn" style="flex:1">Copy</button></div>
-    <div class="muted" style="font-size:13px;text-align:center">A new set of 5 films arrives tomorrow.</div>
+    <div class="muted" style="font-size:13px;text-align:center">A new set of 5 arrives tomorrow.</div>
   </section>
 
   <!-- ===== STATS ===== -->
   <section class="screen" id="statsScreen" aria-labelledby="statsTitle">
-    <div class="row"><button class="icon-btn" data-home aria-label="Back to home"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button><h1 class="title" id="statsTitle" style="font-size:28px">Your stats</h1></div>
+    <div class="row"><button class="icon-btn" data-home aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button><h1 class="title" id="statsTitle" style="font-size:28px">Your stats</h1></div>
     <div class="grid2" id="statsGrid"></div>
-    <div class="label">Accuracy by industry</div>
+    <div class="label" id="statsCatLabel">Accuracy</div>
     <div id="statsInd" style="display:flex;flex-direction:column;gap:10px"></div>
-    <div class="label">Best decade</div>
+    <div class="label" id="statsDecadeLabel">Best decade</div>
     <div id="statsDecade" class="list-line"></div>
     <button class="btn text" id="resetStats" style="margin-top:auto">Reset stats</button>
   </section>
 
   <!-- ===== SETTINGS ===== -->
   <section class="screen" id="settingsScreen" aria-labelledby="setTitle">
-    <div class="row"><button class="icon-btn" data-home aria-label="Back to home"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button><h1 class="title" id="setTitle" style="font-size:28px">Settings</h1></div>
-    <div class="set-group"><div class="label">Films from</div>
-      <div class="row" style="flex-wrap:wrap;gap:8px" id="setIndustries">
-        <button class="chip" data-ind="hollywood"><svg class="tick" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Hollywood</button>
-        <button class="chip" data-ind="bollywood"><svg class="tick" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Bollywood</button>
-      </div></div>
+    <div class="row"><button class="icon-btn" data-hub aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button><h1 class="title" id="setTitle" style="font-size:28px">Settings</h1></div>
     <div class="set-group"><div class="label">Difficulty</div>
       <div class="seg five" id="setDiff" role="group" aria-label="Difficulty"><button data-v="supereasy">Super easy</button><button data-v="easy">Easy</button><button data-v="medium">Medium</button><button data-v="hard">Hard</button><button data-v="mixed">Mixed</button></div></div>
     <div class="set-group"><div class="label">Time per clue</div>
       <div class="seg three" id="setTime" role="group" aria-label="Time per clue"><button data-v="15">15 sec</button><button data-v="30">30 sec</button><button data-v="60">1 min</button></div>
-      <div class="muted" style="font-size:12px">The daily challenge always uses 15 seconds, so everyone's scores compare fairly.</div>
-      <div class="toggle-row"><span id="lblAuto">Auto next film<small style="display:block;color:var(--muted);font-size:12px">Start the next film 3 seconds after each answer</small></span><button class="switch" role="switch" id="swAuto" aria-labelledby="lblAuto"></button></div></div>
-    <div class="set-group"><div class="label">Years</div><div class="yp" id="setYears" data-yp></div></div>
+      <div class="muted" style="font-size:12px">Daily challenges always use 15 seconds, so everyone's scores compare fairly.</div>
+      <div class="toggle-row"><span id="lblAuto">Auto next<small style="display:block;color:var(--muted);font-size:12px">Start the next round 3 seconds after each answer</small></span><button class="switch" role="switch" id="swAuto" aria-labelledby="lblAuto"></button></div></div>
     <div class="set-group"><label class="label" for="setNick">Nickname</label><input id="setNick" class="text-input" maxlength="24" autocomplete="off" /></div>
     <div>
       <div class="toggle-row"><span id="lblSound">Sound effects</span><button class="switch" role="switch" id="swSound" aria-labelledby="lblSound"></button></div>
@@ -547,17 +271,23 @@
         <div class="muted" id="voiceSupport" style="font-size:12px"></div></div>
       <div class="toggle-row"><span id="lblRm">Reduce motion</span><button class="switch" role="switch" id="swRm" aria-labelledby="lblRm"></button></div>
     </div>
-    <button class="btn ghost wide" id="resetSeen">Reset seen films</button>
+    <button class="btn ghost wide" id="resetSeen">Reset seen answers</button>
     <button class="btn ghost wide" id="replayTutorial">Replay the tutorial</button>
-    <p class="credit">Film data and images from The Movie Database (TMDB). This product uses the TMDB API but is not endorsed or certified by TMDB.<br><br>We count anonymous plays to improve the game. No cookies, no personal data.</p>
+    <button class="btn ghost wide" id="openAbout2">About &amp; credits</button>
+  </section>
+
+  <!-- ===== ABOUT ===== -->
+  <section class="screen" id="aboutScreen" aria-labelledby="aboutTitle">
+    <div class="row"><button class="icon-btn" data-hub aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button><h1 class="title" id="aboutTitle" style="font-size:28px">About</h1></div>
+    <div class="about" id="aboutBody"></div>
   </section>
 </div>
 
 <!-- countdown -->
 <div class="overlay" id="countdown" hidden aria-live="assertive">
   <div class="countdown">
-    <svg class="slate" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="3" y="9" width="18" height="12" rx="1.5"/><path d="M3 9l2.5-5 15 3L21 9M7.5 4.5L9 8.5M12.5 5.5L14 9.5M17.5 6.5l1 2.5"/></svg>
-    <div class="label gold" id="cdLabel">Film 1</div>
+    <span class="slate" id="cdIcon"></span>
+    <div class="label gold" id="cdLabel">Round 1</div>
     <div class="num" id="cdNum">3</div>
   </div>
 </div>
@@ -566,13 +296,8 @@
 <div class="sheet-bg" id="howTo" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="howToTitle">
     <h2 class="title" id="howToTitle" style="font-size:26px">How to play</h2>
-    <ol>
-      <li><b>Act I · The faces.</b> Three actors from one film.</li>
-      <li><b>Act II · One more face.</b> A fourth actor steps in.</li>
-      <li><b>Act III · The names.</b> Everyone's name appears.</li>
-      <li><b>Act IV · The plot.</b> A short synopsis, names hidden.</li>
-    </ol>
-    <p class="muted" style="margin:0;line-height:1.6;font-size:14px">A new act starts every 15 seconds (you can make it 30 seconds or 1 minute in Settings). Guess any time. Earlier acts are worth more (100, 75, 50, 25) plus a speed bonus. You get 3 guesses per film; each miss costs 10 points. Correct answers in a row raise your streak multiplier. Miss a film and you lose a star. Lose all 3 and the curtain falls. Don't know a film? Skip it: up to 3 skips per game, no star lost, but your streak resets.</p>
+    <ol id="howToActs"></ol>
+    <p class="muted" style="margin:0;line-height:1.6;font-size:14px">A new clue arrives every 15 seconds (30 seconds or 1 minute in Settings). Guess any time. Earlier clues are worth more (100, 75, 50, 25) plus a speed bonus. You get 3 guesses per round; each miss costs 10 points. Right answers in a row raise your streak multiplier. Miss one and you lose a star; lose all 3 and the curtain falls. Skip up to 3 per game without losing a star (your streak resets). A close answer, like another title from the same series or franchise, earns 75%.</p>
     <button class="btn primary wide" data-close>Got it</button>
   </div>
 </div>
@@ -590,15 +315,9 @@
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="reportTitle">
     <h2 class="title" id="reportTitle" style="font-size:24px">What's wrong?</h2>
     <div class="muted" id="reportFilm" style="font-size:14px"></div>
-    <div class="who-list" id="reportReasons" style="grid-template-columns:1fr">
-      <button data-reason="Wrong photo">Wrong photo</button>
-      <button data-reason="Wrong actor name">Wrong actor name</button>
-      <button data-reason="Plot gives it away / bad plot">Plot gives it away / bad plot</button>
-      <button data-reason="Wrong title or year">Wrong title or year</button>
-      <button data-reason="Other">Something else</button>
-    </div>
+    <div class="who-list" id="reportReasons" style="grid-template-columns:1fr"></div>
     <label class="label" for="reportNote">Note (optional)</label>
-    <input id="reportNote" class="text-input" maxlength="200" placeholder="e.g. the 2nd photo is a different actor" autocomplete="off" />
+    <input id="reportNote" class="text-input" maxlength="200" placeholder="What did you notice?" autocomplete="off" />
     <button class="btn primary wide" id="reportSend" disabled>Send report</button>
     <p class="muted" style="margin:0;font-size:12px;line-height:1.5">Opens a pre-filled report on GitHub in a new tab (you'll need a free GitHub account to submit it). It's also saved on this device.</p>
     <button class="btn text wide" data-close>Cancel</button>
@@ -607,8 +326,8 @@
 <div class="sheet-bg" id="voiceSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="voiceTitle">
     <h2 class="title" id="voiceTitle" style="font-size:26px">Hands-free voice</h2>
-    <p class="muted" style="margin:0;line-height:1.6;font-size:14px">While a film is on screen, the microphone listens. Say the film's name and it counts the moment it's right. Chatter and wrong titles are ignored and never cost you anything. You can also say “next clue” or “skip”.</p>
-    <p class="muted" style="margin:0;line-height:1.6;font-size:14px">Your browser's speech service (Apple or Google) turns speech into text. Your browser will ask for microphone permission once. The mic is only on during a film, never on menus.</p>
+    <p class="muted" style="margin:0;line-height:1.6;font-size:14px">While a round is on screen, the microphone listens. Say the answer and it counts the moment it's right. Chatter and wrong answers are ignored and never cost you anything. You can also say “next clue” or “skip”.</p>
+    <p class="muted" style="margin:0;line-height:1.6;font-size:14px">Your browser's speech service (Apple or Google) turns speech into text. Your browser will ask for microphone permission once. The mic is only on during a round, never on menus.</p>
     <button class="btn primary wide" id="voiceOk">Turn on voice</button>
     <button class="btn text wide" data-close>Not now</button>
   </div>
@@ -617,1112 +336,10 @@
 <canvas id="confetti" hidden></canvas>
 <div class="toast" id="toast" hidden role="status"></div>
 
-<script src="movies.js?v=3.9"></script>
-<script>
-(() => {
-  "use strict";
-  // ================= data =================
-  const IMG = window.IMG_BASE || "";
-  const fullImg = (path, size) => !path ? "" : /^https?:/.test(path) ? path : IMG + size + path;
-  // movies.js stores cast as [name, billing order, photo path] to keep the file small
-  const ALL = (window.MOVIES || []).map(m => ({
-    ...m, industry: m.industry || "bollywood", pop: m.pop ?? 1, poster: fullImg(m.poster, "w500"),
-    cast: (m.cast || []).map(c => Array.isArray(c) ? { name: c[0], order: c[1], photo: fullImg(c[2], "h632") } : { ...c, photo: fullImg(c.photo, "h632") }),
-  })).filter(m => m.cast.length >= 4);
-  // ---- series (same cast across instalments) ----
-  const SERIES = window.SERIES || {};
-  const compact = v => normalize(v).replace(/\s/g, "");
-  Object.values(SERIES).forEach(sr => { sr.keys = [...new Set([sr.n, ...(sr.a || [])].map(compact).filter(Boolean))]; });
-  const TITLE_INDEX = new Map();
-  ALL.forEach(m => [m.title, ...(m.aliases || [])].forEach(t => { const k = compact(t); if (k && !TITLE_INDEX.has(k)) TITLE_INDEX.set(k, m); }));
-  const TITLES = (() => {
-    const map = new Map();
-    (window.TITLE_LIST || []).forEach(([t, y]) => map.set(`${t.toLowerCase()}|${y}`, { title: t, year: y }));
-    ALL.forEach(m => map.set(`${m.title.toLowerCase()}|${m.year}`, { title: m.title, year: m.year }));
-    Object.values(SERIES).forEach(sr => { if ((sr.c || 0) >= 2) map.set(`${sr.n.toLowerCase()}|series`, { title: sr.n, year: null, series: true }); });
-    return [...map.values()];
-  })();
-  const INDUSTRY_NAME = { hollywood: "Hollywood", bollywood: "Bollywood" };
-
-  // ================= rules =================
-  const ACTS = [
-    { n: "Act I", name: "The faces", base: 100, hint: "Three actors. One film." },
-    { n: "Act II", name: "One more face", base: 75, hint: "Enter, stage left." },
-    { n: "Act III", name: "The names", base: 50, hint: "Now you know who they are." },
-    { n: "Act IV", name: "The plot", base: 25, hint: "Last act. Read the synopsis." },
-  ];
-  const SERIES_SHARE = 0.75;   // a right-series guess earns 75% of the points
-  const DIFF_NOTES = {
-    supereasy: "Only the biggest hits, lead actors first, 4 guesses · scores ×0.8",
-    easy: "Well-known films, starting with the lead actors",
-    medium: "Two leads and one supporting actor",
-    hard: "Every film, mostly the supporting cast",
-    mixed: "A random difficulty for each film",
-  };
-  const DIFF_MULT = { supereasy: 0.8 };
-  const maxWrong = () => G.diff === "supereasy" ? 4 : MAX_WRONG;
-  const MAX_WRONG = 3, PENALTY = 10, LIVES = 3, DAILY_COUNT = 5, MAX_SKIPS = 3, MIN_POOL = 10, DAILY_SEC = 15;
-  const YEAR_MIN = Math.min(...ALL.map(m => m.year || 9999)), YEAR_MAX = new Date().getFullYear();
-  const PRESETS = [["All years", null, null], ["2000+", 2000, null], ["1990+", 1990, null], ["1970–1999", 1970, 1999], ["Before 1970", null, 1969]];
-  const STREAK_BADGES = { 3: "Hat-trick", 5: "On a roll", 10: "Box office hit" };
-  const NICKS = ["Front Row Fan", "Golden Reel", "Plot Twister", "Midnight Critic", "Silver Screen", "Box Office Bandit", "Credits Roller", "Popcorn Pro", "Matinee Idol", "Scene Stealer"];
-
-  // ================= storage =================
-  const KEY = "castguess.v3";
-  const DEFAULTS = () => ({
-    prefs: { onboarded: false, industries: ["hollywood", "bollywood"], difficulty: "medium", stageSec: 15, yearFrom: null, yearTo: null, mode: "solo", voice: false, voiceLang: "en-IN", voiceNoted: false, autoNext: true,
-      party: { count: 3, names: [], style: "shout", films: 10 }, nickname: "", sound: true, vibrate: true, reduceMotion: false },
-    records: { best: 0, bestStreak: 0 },
-    stats: { seen: 0, won: 0, clueSum: 0, skips: 0, ind: {}, dec: {} },
-    daily: {},
-  });
-  function load() {
-    const d = DEFAULTS();
-    try {
-      const raw = JSON.parse(localStorage.getItem(KEY) || "null");
-      if (raw) {
-        Object.assign(d.prefs, raw.prefs); Object.assign(d.records, raw.records); Object.assign(d.stats, raw.stats); Object.assign(d.daily, raw.daily);
-        const era = d.prefs.era; delete d.prefs.era;  // migrate the old era buckets to a year range
-        if (era === "classic") d.prefs.yearTo = 1979; else if (era === "mid") { d.prefs.yearFrom = 1980; d.prefs.yearTo = 2009; } else if (era === "modern") d.prefs.yearFrom = 2010;
-        if (![15, 30, 60].includes(d.prefs.stageSec)) d.prefs.stageSec = 15;
-        d.prefs.party = Object.assign({ count: 3, names: [], style: "shout", films: 10 }, d.prefs.party || {});
-      }
-    } catch { /* storage unavailable */ }
-    return d;
-  }
-  let DB = load();
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch { /* ignore */ } }
-
-  // ================= helpers =================
-  const $ = s => document.querySelector(s);
-  const $$ = s => [...document.querySelectorAll(s)];
-  const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
-  function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-  function hash(s) { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
-  function shuffle(a, rng = Math.random) { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; }
-  const roman = n => ["I", "II", "III", "IV"][n];
-  const rm = () => DB.prefs.reduceMotion || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  function applyMotion() { document.body.classList.toggle("rm", rm()); }
-  function toast(msg, ms = 2200) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => { t.hidden = true; }, ms); }
-  function buzz(p) { if (DB.prefs.vibrate && navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) { try { navigator.vibrate(p); } catch { /* ignore */ } } }
-  const decadeOf = y => y ? `${Math.floor(y / 10) * 10}s` : "Unknown";
-
-  function normalize(v) {
-    return String(v ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
-      .replace(/&/g, " and ").replace(/\b(the|a|an)\b/g, " ").replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
-  }
-  function lev(a, b) {
-    if (a === b) return 0; if (!a.length) return b.length; if (!b.length) return a.length;
-    const row = Array.from({ length: b.length + 1 }, (_, i) => i);
-    for (let i = 1; i <= a.length; i++) { let prev = row[0]; row[0] = i;
-      for (let j = 1; j <= b.length; j++) { const s = row[j]; row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = s; } }
-    return row[b.length];
-  }
-  const answers = m => [m.title, ...(m.aliases || [])].map(normalize).filter(Boolean);
-  function matches(value, m) {
-    const g = normalize(value).replace(/\s/g, ""); if (!g) return false;
-    return answers(m).some(c => { const t = c.replace(/\s/g, ""); if (g === t) return true; if (g.replace(/\D/g, "") !== t.replace(/\D/g, "")) return false; /* sequel numbers are never typos */ const max = Math.max(g.length, t.length); return max > 4 && lev(g, t) <= (max >= 15 ? 2 : 1); });
-  }
-  // A different film from the same series, or the series name itself ("Harry Potter", "Dhoom")
-  function seriesMatch(value, m) {
-    const sr = m.s && SERIES[m.s]; if (!sr) return false;
-    const gc = compact(value); if (gc.length < 2) return false;
-    if (sr.keys.some(k => gc === k || (k.length >= 6 && lev(gc, k) <= 1))) return true;
-    const other = TITLE_INDEX.get(gc); if (other && other.s === m.s) return true;
-    return sr.keys.some(k => k.length >= 5 && gc.includes(k));
-  }
-  // A film from the same shared universe but a different series (e.g. Iron Man for an Avengers film)
-  function universeMatch(value, m) {
-    if (!m.u) return false;
-    const gc = compact(value); if (gc.length < 3) return false;
-    const other = TITLE_INDEX.get(gc); if (other && other.u === m.u && other.id !== m.id) return true;
-    return Object.values(SERIES).some(sr => sr.u === m.u && sr.keys.some(k => k.length >= 5 && gc.includes(k)));
-  }
-  function nearMiss(value, m) {
-    const g = normalize(value); if (g.length < 3) return false;
-    const base = s => s.replace(/\b(part|chapter|vol|volume|returns|rises|reloaded|revolutions)\b.*$/, "").replace(/\b(\d+|ii|iii|iv|v|vi)\b/g, "").replace(/\s+/g, " ").trim();
-    return answers(m).some(t => (base(g).length >= 3 && base(g) === base(t)) || t.startsWith(g + " ") || g.startsWith(t + " "));
-  }
-
-  // ================= anonymous analytics =================
-  const IS_LIVE = /\.github\.io$/.test(location.hostname);
-  const trackQueue = [];
-  function track(name, title) {
-    if (!IS_LIVE) return;   // harmless no-op when testing locally
-    trackQueue.push([name, title]); flushTrack();
-  }
-  function flushTrack(tries = 0) {
-    const gc = window.goatcounter;
-    if (gc && typeof gc.count === "function") {
-      while (trackQueue.length) { const [n, t] = trackQueue.shift(); try { gc.count({ path: "event/" + n, title: t || n, event: true }); } catch { /* ignore */ } }
-      return;
-    }
-    if (tries < 10) setTimeout(() => flushTrack(tries + 1), 1000);
-  }
-  const filmsBucket = n => n >= 20 ? "20plus" : n >= 10 ? "10-19" : n >= 5 ? "5-9" : "1-4";
-
-  // ================= sound (WebAudio synth) =================
-  const sfx = (() => {
-    let ctx;
-    function ac() { if (!DB.prefs.sound) return null; try { ctx = ctx || new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === "suspended") ctx.resume(); return ctx; } catch { return null; } }
-    function tone(f, t0, dur, type = "sine", vol = .12, f2) {
-      const c = ac(); if (!c) return; const t = c.currentTime + t0;
-      const o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(f, t);
-      if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
-      g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .012); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-      o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + .03);
-    }
-    return {
-      unlock() { ac(); },
-      tick() { tone(1150, 0, .05, "square", .04); },
-      count() { tone(660, 0, .14, "sine", .12); },
-      action() { tone(990, 0, .3, "triangle", .14); tone(1320, .06, .3, "sine", .06); },
-      whoosh() { tone(300, 0, .22, "sine", .05, 700); },
-      wrong() { tone(170, 0, .24, "square", .06, 110); },
-      near() { tone(520, 0, .14, "sine", .1, 720); },
-      chime() { tone(880, 0, .6, "sine", .1); tone(1320, .1, .7, "sine", .05); },
-      miss() { tone(440, 0, .3, "sine", .09, 330); tone(330, .25, .45, "sine", .07, 247); },
-      badge() { tone(784, 0, .16, "triangle", .1); tone(1175, .13, .4, "triangle", .1); },
-    };
-  })();
-
-  // ================= winning sound: B · Award chime (from sound_lab.html) =================
-  // level 3 = guessed on clue 1, 2 = clues 2–3, 1 = "just made it" on clue 4
-  function createWinSounds() {
-    let ctx, out, verb;
-    function ac() {
-      if (!ctx) {
-        ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
-        out = ctx.createGain(); out.gain.value = 0.9; out.connect(comp).connect(ctx.destination);
-        // small generated reverb so everything sounds less "beepy"
-        verb = ctx.createConvolver(); const len = ctx.sampleRate * 1.6, ir = ctx.createBuffer(2, len, ctx.sampleRate);
-        for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
-        verb.buffer = ir; const wet = ctx.createGain(); wet.gain.value = 0.28; verb.connect(wet).connect(out);
-      }
-      if (ctx.state === "suspended") ctx.resume();
-      return ctx;
-    }
-    const now = () => ac().currentTime;
-    function bus(gain = 1, rev = true) { const g = ctx.createGain(); g.gain.value = gain; g.connect(out); if (rev) g.connect(verb); return g; }
-    function env(param, t, a, peak, d, sustain = 0.0001) { param.cancelScheduledValues(t); param.setValueAtTime(0.0001, t); param.exponentialRampToValueAtTime(peak, t + a); param.exponentialRampToValueAtTime(Math.max(sustain, 0.0001), t + a + d); }
-    function noiseBuf(sec) { const n = Math.floor(ctx.sampleRate * sec), b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; return b; }
-    const hz = m => 440 * Math.pow(2, (m - 69) / 12);   // MIDI note -> Hz
-
-    // --- building blocks ---
-    function brass(t, midi, dur, vol, dest) {
-      const g = ctx.createGain(), f = ctx.createBiquadFilter(); f.type = "lowpass"; f.Q.value = 2;
-      f.frequency.setValueAtTime(400, t); f.frequency.exponentialRampToValueAtTime(3200, t + 0.06); f.frequency.exponentialRampToValueAtTime(1400, t + dur);
-      [-6, 6, 0].forEach(det => { const o = ctx.createOscillator(); o.type = "sawtooth"; o.frequency.value = hz(midi); o.detune.value = det; o.connect(f); o.start(t); o.stop(t + dur + 0.1); });
-      const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 5.5; lg.gain.value = 6; lfo.connect(lg);
-      f.connect(g).connect(dest); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.03); g.gain.setValueAtTime(vol * 0.8, t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.08);
-    }
-    function bell(t, midi, vol, dest, decay = 1.4, ratio = 3.5) {
-      const c = ctx.createOscillator(), m = ctx.createOscillator(), mg = ctx.createGain(), g = ctx.createGain(), f = hz(midi);
-      c.frequency.value = f; m.frequency.value = f * ratio; mg.gain.setValueAtTime(f * 2.2, t); mg.gain.exponentialRampToValueAtTime(f * 0.05, t + decay);
-      m.connect(mg).connect(c.frequency); c.connect(g).connect(dest); env(g.gain, t, 0.004, vol, decay);
-      c.start(t); m.start(t); c.stop(t + decay + 0.1); m.stop(t + decay + 0.1);
-    }
-    function pluck(t, midi, vol, dest, decay = 1.1) {
-      const o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
-      o.type = "triangle"; o2.type = "sine"; o.frequency.value = hz(midi); o2.frequency.value = hz(midi) * 2;
-      f.type = "lowpass"; f.frequency.setValueAtTime(5000, t); f.frequency.exponentialRampToValueAtTime(900, t + decay);
-      const g2 = ctx.createGain(); g2.gain.value = 0.25; o2.connect(g2).connect(f); o.connect(f).connect(g).connect(dest);
-      env(g.gain, t, 0.003, vol, decay); o.start(t); o2.start(t); o.stop(t + decay + 0.05); o2.stop(t + decay + 0.05);
-    }
-    function clap(t, vol, dest) {
-      const s = ctx.createBufferSource(); s.buffer = noiseBuf(0.12); const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 1200 + Math.random() * 1400; f.Q.value = 1.2;
-      const g = ctx.createGain(); s.connect(f).connect(g).connect(dest); env(g.gain, t, 0.002, vol, 0.09); s.start(t);
-    }
-    function cymbal(t, vol, dest, dur = 1.5, swell = 0) {
-      const s = ctx.createBufferSource(); s.buffer = noiseBuf(dur + swell + 0.1); const f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 6000;
-      const g = ctx.createGain(); s.connect(f).connect(g).connect(dest);
-      g.gain.setValueAtTime(0.0001, t);
-      if (swell) g.gain.exponentialRampToValueAtTime(vol * 0.6, t + swell);
-      g.gain.exponentialRampToValueAtTime(vol, t + swell + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + swell + dur); s.start(t);
-    }
-    function timpani(t, vol, dest) {
-      const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(65, t + 0.4);
-      o.connect(g).connect(dest); env(g.gain, t, 0.005, vol, 0.7); o.start(t); o.stop(t + 0.8);
-    }
-
-    return {
-      chime: {
-        name: "Award chime", desc: "Bright glockenspiel arpeggio with a sparkle on top.",
-        play(level = 3) {
-          ac(); const t = now() + 0.02, b = bus(0.8);
-          const notes = level >= 3 ? [84, 88, 91, 96, 100] : level === 2 ? [84, 88, 91, 96] : [91, 96];
-          notes.forEach((m, i) => bell(t + i * 0.075, m, 0.22, b, level === 1 ? 1.0 : 1.6));
-          if (level >= 2) for (let i = 0; i < (level >= 3 ? 10 : 5); i++) bell(t + 0.35 + i * 0.045, 100 + (i % 5) * 2, 0.04, b, 0.5, 5.2);
-        },
-      },
-    };
-  }
-  const WIN = createWinSounds();
-  function winSound(level) { if (!DB.prefs.sound) return; try { WIN.chime.play(level); } catch { /* audio unavailable */ } }
-
-  // ================= confetti =================
-  function confetti(amount = 160) {
-    if (rm()) return;
-    const cv = $("#confetti"), dpr = window.devicePixelRatio || 1; cv.hidden = false;
-    cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; const ctx = cv.getContext("2d"); ctx.scale(dpr, dpr);
-    const colors = ["#E2C27A", "#F1D9A0", "#F4EFE4", "#C7A964", "#FFFFFF"];
-    const parts = Array.from({ length: amount }, () => ({ x: innerWidth / 2 + (Math.random() - .5) * 80, y: innerHeight * .38, vx: (Math.random() - .5) * 13, vy: -Math.random() * 15 - 4, s: 4 + Math.random() * 6, r: Math.random() * 6, vr: (Math.random() - .5) * .35, c: colors[Math.floor(Math.random() * colors.length)] }));
-    const start = performance.now();
-    (function frame(now) {
-      const t = now - start; ctx.clearRect(0, 0, innerWidth, innerHeight);
-      parts.forEach(p => { p.vy += .38; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += p.vr; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.globalAlpha = Math.max(0, 1 - t / 2600); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); ctx.restore(); });
-      if (t < 2600) requestAnimationFrame(frame); else { ctx.clearRect(0, 0, innerWidth, innerHeight); cv.hidden = true; }
-    })(start);
-  }
-
-  // ================= screens =================
-  function show(id) { $$(".screen").forEach(s => s.classList.toggle("active", s.id === id)); window.scrollTo(0, 0); if (typeof syncVoice === "function") { try { syncVoice(); } catch { /* voice not ready yet */ } } }
-  function starSvg(lost = false, extra = "") { return `<svg class="star ${lost ? "lost" : ""} ${extra}" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 20.9l1.6-7L2 9.2l7.1-.6z" fill="#E2C27A"/></svg>`; }
-  function setPressed(container, attr, values) { $$(`${container} [data-${attr}]`).forEach(b => b.setAttribute("aria-pressed", String(values.includes(b.dataset[attr === "ind" ? "ind" : "v"])))); }
-
-  // ================= film pools =================
-  function yearOk(m) { const y = m.year || 0, f = DB.prefs.yearFrom, t = DB.prefs.yearTo; return (f == null || y >= f) && (t == null || y <= t); }
-  const POP_MIN = { easy: 0.55, medium: 0.25 };   // share of each industry's least-known films kept out
-  function pool() {
-    const base = ALL.filter(m => DB.prefs.industries.includes(m.industry) && yearOk(m));
-    const min = POP_MIN[DB.prefs.difficulty] || 0;
-    const famous = DB.prefs.difficulty === "supereasy" ? base.filter(m => m.f) : base.filter(m => m.pop >= min);
-    return famous.length >= 30 || famous.length === base.length ? famous : base;   // small selections keep everything
-  }
-  function yearsText() { const f = DB.prefs.yearFrom, t = DB.prefs.yearTo; return f == null && t == null ? "All" : f == null ? `Up to ${t}` : t == null ? `${f} onwards` : `${f}–${t}`; }
-
-  // ----- year range panel (Home + Settings share this) -----
-  function mountYearPanel(el) {
-    el.innerHTML = `<div class="yp-head"><span class="label">Films from</span><b data-yl></b></div>
-      <div class="range"><div class="rail"><div class="fill" data-fill></div></div>
-        <input type="range" data-from min="${YEAR_MIN}" max="${YEAR_MAX}" step="1" aria-label="Start year">
-        <input type="range" data-to min="${YEAR_MIN}" max="${YEAR_MAX}" step="1" aria-label="End year"></div>
-      <div class="presets">${PRESETS.map(([l], i) => `<button class="chip" data-preset="${i}">${l}</button>`).join("")}</div>
-      <div class="match" data-match aria-live="polite"></div>`;
-    const from = el.querySelector("[data-from]"), to = el.querySelector("[data-to]");
-    const setRange = (f, t) => { DB.prefs.yearFrom = f <= YEAR_MIN ? null : f; DB.prefs.yearTo = t >= YEAR_MAX ? null : t; save(); updateYearUI(); };
-    from.addEventListener("input", () => { const f = Math.min(+from.value, +to.value); setRange(f, +to.value); });
-    to.addEventListener("input", () => { const t = Math.max(+to.value, +from.value); setRange(+from.value, t); });
-    el.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => { const [, f, t] = PRESETS[+b.dataset.preset]; setRange(f ?? YEAR_MIN, t ?? YEAR_MAX); }));
-  }
-  function updateYearUI() {
-    const f = DB.prefs.yearFrom ?? YEAR_MIN, t = DB.prefs.yearTo ?? YEAR_MAX, n = pool().length, span = YEAR_MAX - YEAR_MIN || 1;
-    $$("[data-yp]").forEach(el => {
-      if (!el.querySelector("[data-from]")) return;
-      el.querySelector("[data-from]").value = f; el.querySelector("[data-to]").value = t;
-      el.querySelector("[data-yl]").textContent = `${f} – ${t}`;
-      const fill = el.querySelector("[data-fill]"); fill.style.left = `${100 * (f - YEAR_MIN) / span}%`; fill.style.right = `${100 * (YEAR_MAX - t) / span}%`;
-      el.querySelectorAll("[data-preset]").forEach(b => { const [, pf, pt] = PRESETS[+b.dataset.preset]; b.setAttribute("aria-pressed", String((pf ?? null) === DB.prefs.yearFrom && (pt ?? null) === DB.prefs.yearTo)); });
-      const m = el.querySelector("[data-match]"); m.classList.toggle("low", n < MIN_POOL);
-      m.textContent = n < MIN_POOL ? `Only ${n} film${n === 1 ? " matches" : "s match"}. Widen the years or add an industry (at least ${MIN_POOL} needed).` : `${n} films match your choices`;
-    });
-    $("#yearsSummary").textContent = yearsText();
-    $("#homeDiffNote").textContent = DIFF_NOTES[DB.prefs.difficulty] || "";
-    $("#homeMatchMini").textContent = `· ${n} film${n === 1 ? "" : "s"}`; $("#homeMatchMini").classList.toggle("low", n < MIN_POOL);
-  }
-  function todayKey() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
-  function dailyNumber() { const d = new Date(); return Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(2026, 9, 29)) / 864e5) + 1; }
-  // keep films from the same series at least `gap` films apart
-  function spreadSeries(list, gap = 15) {
-    const out = [], waiting = [...list];
-    while (waiting.length) {
-      const recent = new Set(out.slice(-gap).map(m => m.s).filter(Boolean));
-      const i = waiting.findIndex(m => !m.s || !recent.has(m.s));
-      out.push(waiting.splice(i < 0 ? 0 : i, 1)[0]);
-    }
-    return out;
-  }
-  function dailyFilms() { const rng = mulberry32(hash("daily-" + todayKey())); const seen = new Set(); return shuffle(ALL.filter(m => m.pop >= 0.4).sort((a, b) => a.id - b.id), rng).filter(m => !m.s || (!seen.has(m.s) && seen.add(m.s))).slice(0, DAILY_COUNT); }
-  function practiceFilm() {
-    const prefer = DB.prefs.industries.includes("hollywood") ? ["Titanic", "Dilwale Dulhania Le Jayenge"] : ["Dilwale Dulhania Le Jayenge", "3 Idiots"];
-    for (const t of prefer) { const m = ALL.find(x => x.title === t); if (m) return m; }
-    return pool()[0] || ALL[0];
-  }
-
-  // Which actors to show, from billing order and difficulty.
-  function pickLineup(movie, diff, rng = Math.random) {
-    const leads = shuffle(movie.cast.filter(c => c.order <= 3), rng);
-    let support = shuffle(movie.cast.filter(c => c.order >= 4 && c.order <= 8), rng);
-    if (support.length < 2) support = shuffle(movie.cast.filter(c => c.order >= 4), rng);
-    const take = (p, n) => p.splice(0, Math.min(n, p.length));
-    let initial, extra;
-    if (diff === "supereasy") { initial = take(leads, 3); const next = movie.cast.filter(c => c.order > 3).sort((a, b) => a.order - b.order)[0]; extra = next; support = support.filter(c => c !== next); }
-    else if (diff === "easy") { initial = take(leads, 3); extra = take(support, 1)[0]; }
-    else if (diff === "medium") { initial = [...take(leads, 2), ...take(support, 1)]; extra = take(support, 1)[0] || take(leads, 1)[0]; }
-    else { initial = [...take(leads, 1), ...take(support, 2)]; extra = take(leads, 1)[0] || take(support, 1)[0]; }
-    const rest = [...leads, ...support];
-    while (initial.length < 3 && rest.length) initial.push(rest.shift());
-    if (!extra) extra = rest.shift();
-    return { initial: shuffle(initial, rng), extra };
-  }
-
-  // ================= onboarding =================
-  const ob = { industries: ["hollywood", "bollywood"], level: "medium" };
-  function suggestNick() { return `${NICKS[Math.floor(Math.random() * NICKS.length)]} ${Math.floor(Math.random() * 90 + 10)}`; }
-  function finishOnboarding(practice) {
-    track("onboarding_done");
-    DB.prefs.industries = ob.industries.length ? ob.industries : ["hollywood", "bollywood"];
-    DB.prefs.difficulty = ob.level;
-    DB.prefs.nickname = ($("#nickInput").value || "").trim() || DB.prefs.nickname || suggestNick();
-    DB.prefs.onboarded = true; save();
-    if (practice) startGame("practice"); else goHome();
-  }
-  $$("#ob1 .choice").forEach(b => b.addEventListener("click", () => {
-    const on = b.getAttribute("aria-pressed") !== "true"; b.setAttribute("aria-pressed", String(on));
-    ob.industries = $$("#ob1 .choice").filter(x => x.getAttribute("aria-pressed") === "true").map(x => x.dataset.ind);
-    $("#ob1Next").disabled = !ob.industries.length;
-  }));
-  $("#ob1Next").addEventListener("click", () => { sfx.unlock(); show("ob2"); });
-  $$("#ob2 .choice").forEach(b => b.addEventListener("click", () => {
-    $$("#ob2 .choice").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
-    ob.level = b.dataset.level; setTimeout(() => { $("#nickInput").value = DB.prefs.nickname || suggestNick(); show("ob3"); }, 220);
-  }));
-  $("#nickShuffle").addEventListener("click", () => { $("#nickInput").value = suggestNick(); });
-  $("#obPractice").addEventListener("click", () => finishOnboarding(true));
-  $("#obSkipPractice").addEventListener("click", () => finishOnboarding(false));
-  $$("[data-skip]").forEach(b => b.addEventListener("click", () => finishOnboarding(false)));
-  function startOnboarding() {
-    ob.industries = [...DB.prefs.industries]; ob.level = DB.prefs.difficulty === "mixed" ? "medium" : DB.prefs.difficulty;
-    $$("#ob1 .choice").forEach(b => b.setAttribute("aria-pressed", String(ob.industries.includes(b.dataset.ind))));
-    $$("#ob2 .choice").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.level === ob.level)));
-    $("#ob1Next").disabled = !ob.industries.length; show("ob1");
-  }
-
-  // ================= home =================
-  function goHome() {
-    const p = pool();
-    const faces = shuffle((p.length ? p : ALL).flatMap(m => m.cast.filter(c => c.order <= 2).map(c => c.photo))).slice(0, 3);
-    $("#homeFaces").innerHTML = faces.map(src => `<img src="${esc(src)}" alt="">`).join("");
-    $("#homeGreeting").textContent = DB.prefs.nickname ? `Welcome back, ${DB.prefs.nickname}. Name the film before the credits roll.` : "Three faces walk onto the screen. Name the film before the credits roll.";
-    setPressed("#homeIndustries", "ind", DB.prefs.industries);
-    $$("#homeDiff button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === DB.prefs.difficulty)));
-    $("#homeRecords").innerHTML = `Best <b>${DB.records.best.toLocaleString()}</b> · Streak <b>${DB.records.bestStreak}</b>`;
-    const done = DB.daily[todayKey()];
-    $("#dailyCard").innerHTML = done
-      ? `<span class="cal">${dailyNumber()}</span><span><strong>Daily #${dailyNumber()} done · ${done.results.filter(r => r.won).length}/${DAILY_COUNT}</strong><small>See your result and share it</small></span>`
-      : `<span class="cal">${dailyNumber()}</span><span><strong>Daily challenge #${dailyNumber()}</strong><small>5 films, same for everyone · 15 sec per clue</small></span>`;
-    $$("#homeTime button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.v === DB.prefs.stageSec)));
-    updateYearUI(); renderHomeMode(); syncVoiceUI();
-    show("homeScreen");
-  }
-  $$("#homeIndustries [data-ind], #setIndustries [data-ind]").forEach(b => b.addEventListener("click", () => {
-    const ind = b.dataset.ind; const cur = new Set(DB.prefs.industries);
-    if (cur.has(ind)) { if (cur.size === 1) { toast("Pick at least one industry."); return; } cur.delete(ind); } else cur.add(ind);
-    DB.prefs.industries = [...cur]; save();
-    setPressed("#homeIndustries", "ind", DB.prefs.industries); setPressed("#setIndustries", "ind", DB.prefs.industries);
-    updateYearUI();
-  }));
-  function bindSeg(sel, key, after) {
-    $$(`${sel} button`).forEach(b => b.addEventListener("click", () => { DB.prefs[key] = b.dataset.v; save(); $$(`${sel} button`).forEach(x => x.setAttribute("aria-pressed", String(x === b))); after && after(); }));
-  }
-  bindSeg("#homeDiff", "difficulty", updateYearUI); bindSeg("#setDiff", "difficulty", updateYearUI);
-  $$("#homeTime button, #setTime button").forEach(b => b.addEventListener("click", () => {
-    DB.prefs.stageSec = +b.dataset.v; save();
-    $$("#homeTime button, #setTime button").forEach(x => x.setAttribute("aria-pressed", String(+x.dataset.v === DB.prefs.stageSec)));
-  }));
-  mountYearPanel($("#homeYears")); mountYearPanel($("#setYears"));
-  $("#yearsToggle").addEventListener("click", () => { const open = $("#homeYears").hidden; $("#homeYears").hidden = !open; $("#yearsToggle").setAttribute("aria-expanded", String(open)); });
-  $("#startSolo").addEventListener("click", () => {
-    sfx.unlock(); const n = pool().length;
-    if (n < MIN_POOL) { toast(`Only ${n} film${n === 1 ? " matches" : "s match"} your choices. Widen the years or add an industry.`, 3200); $("#homeYears").hidden = false; $("#yearsToggle").setAttribute("aria-expanded", "true"); return; }
-    startGame(DB.prefs.mode === "party" ? "party" : "solo");
-  });
-  $("#dailyCard").addEventListener("click", () => { sfx.unlock(); DB.daily[todayKey()] ? showDailyResult() : startGame("daily"); });
-  $("#openStats").addEventListener("click", showStats);
-  $("#openSettings").addEventListener("click", showSettings);
-  $("#openHowTo").addEventListener("click", () => { $("#howTo").hidden = false; });
-  $("#howTo").addEventListener("click", e => { if (e.target.id === "howTo" || e.target.closest("[data-close]")) $("#howTo").hidden = true; });
-  $$("[data-home]").forEach(b => b.addEventListener("click", goHome));
-
-  // ================= party setup (home) =================
-  const PCOLORS = ["#E2C27A", "#F08A6C", "#7CC4C9", "#B9A3E8", "#8FD19E", "#F2A7C3", "#9DB4F0", "#E8D3A0"];
-  const PFILMS = { shout: [[5, "5 films"], [10, "10 films"], [15, "15 films"]], turns: [[2, "2 each"], [3, "3 each"], [5, "5 each"]] };
-  function partyNames() { const pp = DB.prefs.party; return Array.from({ length: pp.count }, (_, i) => (pp.names[i] || "").trim() || `Player ${i + 1}`); }
-  function renderHomeMode() {
-    const party = DB.prefs.mode === "party", pp = DB.prefs.party;
-    $$("#modeSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === DB.prefs.mode)));
-    $("#partySetup").hidden = !party; $("#dailyCard").hidden = party;
-    $("#startSolo").textContent = party ? `Start party game · ${pp.count} players` : "Start solo game";
-    if (!party) return;
-    $("#pCount").textContent = pp.count; $("#pMinus").disabled = pp.count <= 2; $("#pPlus").disabled = pp.count >= 8;
-    $("#pNames").innerHTML = Array.from({ length: pp.count }, (_, i) => `<label class="pname"><span class="dot" style="background:${PCOLORS[i]}" aria-hidden="true"></span><span class="sr">Player ${i + 1} name</span><input data-pi="${i}" maxlength="14" placeholder="Player ${i + 1}" value="${esc(pp.names[i] || "")}" autocomplete="off"></label>`).join("");
-    $$("#pStyle button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === pp.style)));
-    $("#pStyleNote").textContent = pp.style === "shout"
-      ? "One screen, everyone plays at once. Shout the answer. When it's right, tap who said it. Turn on hands-free voice and the app hears it for you."
-      : "Pass the phone. Each player gets their own film in turn, scored just like solo.";
-    const opts = PFILMS[pp.style]; if (!opts.some(([v]) => v === pp.films)) pp.films = opts[1][0];
-    $("#pFilmsLabel").textContent = pp.style === "shout" ? "How many films?" : "Films per player";
-    $("#pFilms").innerHTML = opts.map(([v, l]) => `<button data-v="${v}" aria-pressed="${v === pp.films}">${l}</button>`).join("");
-  }
-  $$("#modeSeg button").forEach(b => b.addEventListener("click", () => { DB.prefs.mode = b.dataset.v; save(); renderHomeMode(); }));
-  $("#pMinus").addEventListener("click", () => { DB.prefs.party.count = Math.max(2, DB.prefs.party.count - 1); save(); renderHomeMode(); });
-  $("#pPlus").addEventListener("click", () => { DB.prefs.party.count = Math.min(8, DB.prefs.party.count + 1); save(); renderHomeMode(); setTimeout(() => $(`#pNames [data-pi="${DB.prefs.party.count - 1}"]`)?.focus(), 50); });
-  $("#pNames").addEventListener("input", e => { const i = e.target.dataset.pi; if (i == null) return; DB.prefs.party.names[+i] = e.target.value; save(); });
-  $("#pStyle").addEventListener("click", e => { const b = e.target.closest("button[data-v]"); if (!b) return; DB.prefs.party.style = b.dataset.v; save(); renderHomeMode(); });
-  $("#pFilms").addEventListener("click", e => { const b = e.target.closest("button[data-v]"); if (!b) return; DB.prefs.party.films = +b.dataset.v; save(); renderHomeMode(); });
-
-  // ================= voice =================
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const VOICE_OK = !!SR && window.isSecureContext;
-  const V = { rec: null, running: false, failCount: 0, needsTap: false };
-  function voiceUnsupportedText() { return !SR ? "Voice isn't available in this browser. Try Chrome, or Safari on iPhone/Mac." : "Voice needs a secure link. It works on your Mac at localhost, and on phones once the game is online (https)."; }
-  function syncVoiceUI() {
-    const on = DB.prefs.voice && VOICE_OK;
-    ["#swVoice", "#swHomeVoice"].forEach(id => $(id).setAttribute("aria-checked", String(on)));
-    $("#homeVoiceNote").textContent = VOICE_OK ? "Say the film's name out loud to guess" : "Not available here. See Settings";
-    $("#voiceSupport").textContent = VOICE_OK ? "Tip: English (India) handles both Hollywood and Bollywood titles well." : voiceUnsupportedText();
-    $$("#setLang button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === DB.prefs.voiceLang)));
-    const mic = $("#micBtn"); mic.hidden = !VOICE_OK; mic.classList.toggle("on", on && V.running);
-    mic.setAttribute("aria-pressed", String(on)); mic.setAttribute("aria-label", on ? "Turn off hands-free voice" : "Turn on hands-free voice");
-  }
-  function setVoice(on) {
-    if (on && !VOICE_OK) { toast(voiceUnsupportedText(), 3600); return; }
-    if (on && !DB.prefs.voiceNoted) { $("#voiceSheet").hidden = false; return; }
-    DB.prefs.voice = on; save(); syncVoiceUI(); syncVoice();
-    if (on) track("voice_on");
-  }
-  $("#voiceOk").addEventListener("click", () => { DB.prefs.voiceNoted = true; $("#voiceSheet").hidden = true; setVoice(true); });
-  $("#voiceSheet").addEventListener("click", e => { if (e.target.id === "voiceSheet" || e.target.closest("[data-close]")) $("#voiceSheet").hidden = true; });
-  ["#swVoice", "#swHomeVoice", "#micBtn"].forEach(id => $(id).addEventListener("click", () => setVoice(!(DB.prefs.voice && VOICE_OK))));
-  $$("#setLang button").forEach(b => b.addEventListener("click", () => { DB.prefs.voiceLang = b.dataset.v; save(); syncVoiceUI(); voiceStop(); syncVoice(); }));
-
-  function onReveal() { return $("#revealScreen").classList.contains("active") && G.mode !== "practice"; }
-  function voiceWanted() { return DB.prefs.voice && VOICE_OK && !document.hidden && !G.paused && !G.whoPending && ((!G.over && $("#gameScreen").classList.contains("active")) || onReveal()); }
-  function setHeard(text, live = false) { const h = $("#heard"); h.classList.toggle("live", live); h.textContent = text; }
-  function voiceStart() {
-    if (V.running || !voiceWanted()) return;
-    try {
-      const r = new SR(); r.lang = DB.prefs.voiceLang; r.continuous = true; r.interimResults = true; r.maxAlternatives = 5;
-      r.onresult = onVoice;
-      r.onerror = e => {
-        if (e.error === "not-allowed" || e.error === "service-not-allowed") { DB.prefs.voice = false; save(); voiceStop(); syncVoiceUI(); toast("Microphone is blocked. Allow it in your browser's settings to use voice.", 3600); }
-      };
-      r.onend = () => {
-        V.running = false; V.rec = null; syncVoiceUI();
-        if (!voiceWanted()) { setHeard(""); return; }
-        setTimeout(() => { if (!voiceWanted()) return; V.failCount += 1; if (V.failCount > 4) showResume(); else voiceStart(); }, 250);
-      };
-      r.start(); V.rec = r; V.running = true; V.needsTap = false; if (!onReveal()) setHeard("Listening… say the film's name", true); syncVoiceUI();
-    } catch { showResume(); }
-  }
-  function showResume() {
-    V.needsTap = true; const h = $("#heard"); h.classList.remove("live");
-    h.innerHTML = `<button type="button" id="resumeVoice">Tap to resume listening</button>`;
-    $("#resumeVoice").addEventListener("click", () => { V.failCount = 0; voiceStart(); });
-  }
-  function voiceStop() { const r = V.rec; V.rec = null; V.running = false; if (r) { r.onend = null; try { r.abort(); } catch { /* ignore */ } } setHeard(""); syncVoiceUI(); }
-  function syncVoice() { if (voiceWanted()) { V.failCount = 0; voiceStart(); } else voiceStop(); }
-
-  const FILLERS = /^(i think it s|i think its|i think|is it|it s|its|it is|the answer is|answer is|maybe|um+|uh+|oh|ok|okay)\s+/;
-  function cleanSpoken(a) { let n = normalize(a), prev; do { prev = n; n = n.replace(FILLERS, ""); } while (n !== prev); return n; }
-  function onVoice(e) {
-    V.failCount = 0;
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const res = e.results[i], alts = [];
-      for (let k = 0; k < res.length; k++) if (res[k].transcript.trim()) alts.push(res[k].transcript.trim());
-      if (!alts.length) continue;
-      setHeard(`Heard: “${alts[0]}”`, true);
-      handleSpoken(alts, res.isFinal);
-      if (G.whoPending || (G.over && !onReveal())) return;
-    }
-  }
-  function handleSpoken(alts, final) {
-    if (onReveal()) { if (final && /\b(next|next film|next one|go|continue|keep going|carry on)\b/.test(cleanSpoken(alts[0]))) $("#revNext").click(); return; }
-    if (G.over || G.whoPending) return;
-    for (const a of alts) { const c = cleanSpoken(a); if (matches(a, G.movie) || (c && matches(c, G.movie))) { feedback(`Heard “${a}”`, "near"); correctGuess(); return; } }
-    for (const a of alts) { const c = cleanSpoken(a); if (seriesMatch(a, G.movie) || (c && seriesMatch(c, G.movie))) { feedback(`Heard “${a}” · right series`, "near"); correctGuess(true); return; } }
-    if (!final) return;
-    const n = cleanSpoken(alts[0]);
-    if (/\b(next clue|next act|another clue|more clues?)\b/.test(n)) { if (G.stage < 3) { advance(); toast("Next clue"); } return; }
-    if (/^(skip|skip it|skip this|skip film|skip the film|pass)$/.test(n)) { if (!$("#skipBtn").hidden && !$("#skipBtn").disabled) $("#skipBtn").click(); return; }
-    setHeard(`Heard: “${alts[0]}” · not it`, true);
-  }
-
-  // ================= seen films (no repeats on this device) =================
-  const SEEN_KEY = "castguess.v3.seen";
-  function seenMap() { try { return JSON.parse(localStorage.getItem(SEEN_KEY) || "{}"); } catch { return {}; } }
-  function markSeen(id) { const s = seenMap(); s[id] = Date.now(); try { localStorage.setItem(SEEN_KEY, JSON.stringify(s)); } catch { /* ignore */ } }
-  // Unseen films first. Seen films only come back once ~80% of this pool is used up, oldest-seen first.
-  function freshDeck(p) {
-    const seen = seenMap(), unseen = p.filter(m => !seen[m.id]);
-    const deck = spreadSeries(shuffle(unseen));
-    if (unseen.length >= p.length * 0.2) return deck;
-    return deck.concat(p.filter(m => seen[m.id]).sort((a, b) => seen[a.id] - seen[b.id]));
-  }
-
-  // ================= game state =================
-  const G = { mode: "solo", deck: [], movie: null, lineup: null, diff: "medium", stage: 0, stageStart: 0, wrong: 0, tried: [], over: true, raf: 0, token: 0,
-    paused: false, pausedAt: 0, lastSec: null, score: 0, lives: LIVES, streak: 0, runBest: 0, nailed: [], missed: [], filmNo: 0, results: [], coachStep: 0, giveUpArmed: false, stageMs: 15000, skipsLeft: MAX_SKIPS, skipped: [], autoNext: 0,
-    players: [], pstyle: "shout", totalFilms: 0, cur: 0, credit: -1, whoPending: null, frozenP: null, prevRanks: null, filmStart: 0 };
-
-  function startGame(mode) {
-    let deck;
-    if (mode === "daily") deck = dailyFilms();
-    else if (mode === "practice") deck = [practiceFilm()];
-    else { const p = pool(); if (!p.length) { toast("No films match your filters."); return; } deck = freshDeck(p); }
-    if (mode === "party") {
-      const pp = DB.prefs.party;
-      G.players = partyNames().map((name, i) => ({ name, color: PCOLORS[i], score: 0, nailed: 0, first: 0, last: 0, fastest: Infinity }));
-      G.pstyle = pp.style; G.totalFilms = pp.style === "shout" ? pp.films : pp.films * pp.count; G.prevRanks = null;
-    }
-    Object.assign(G, { mode, deck, score: 0, lives: LIVES, streak: 0, runBest: 0, nailed: [], missed: [], skipped: [], skipsLeft: MAX_SKIPS, filmNo: 0, results: [], movie: null,
-      stageMs: (mode === "daily" ? DAILY_SEC : DB.prefs.stageSec) * 1000 });
-    if (mode === "solo" || mode === "party") {
-      track(mode === "solo" ? "game_start_solo" : "game_start_party");
-      if (mode === "party") track(`party_${G.players.length}`);
-      track(`difficulty_${DB.prefs.difficulty}`);
-      track(`industry_${DB.prefs.industries.length > 1 ? "both" : DB.prefs.industries[0]}`);
-    } else if (mode === "daily") track("daily_start");
-    show("gameScreen"); startRound();
-  }
-
-  function preload(urls, timeout = 3500) {
-    return Promise.race([Promise.all(urls.map(u => new Promise(res => { const i = new Image(); i.onload = i.onerror = res; i.src = u; }))), sleep(timeout)]);
-  }
-
-  async function countdown(label) {
-    const ov = $("#countdown"), num = $("#cdNum"); $("#cdLabel").textContent = label; ov.hidden = false;
-    for (const v of ["3", "2", "1", "Action!"]) {
-      num.textContent = v; num.className = "num" + (v === "Action!" ? " action" : ""); void num.offsetWidth; num.classList.add("go");
-      v === "Action!" ? sfx.action() : sfx.count(); buzz(v === "Action!" ? 40 : 15);
-      await sleep(v === "Action!" ? 520 : 560);
-    }
-    ov.hidden = true;
-  }
-
-  async function startRound() {
-    const token = ++G.token;
-    if ((G.mode === "solo" || G.mode === "party") && !G.deck.length) { G.deck = freshDeck(pool()); if (G.movie && G.deck.length > 1 && G.deck[0].id === G.movie.id) G.deck.push(G.deck.shift()); }
-    G.movie = G.deck.shift(); G.filmNo += 1;
-    if (G.mode === "solo" || G.mode === "party") markSeen(G.movie.id);
-    const rng = G.mode === "daily" ? mulberry32(hash(todayKey() + G.movie.id)) : Math.random;
-    G.diff = G.mode === "practice" ? "easy" : G.mode === "daily" ? "medium" : DB.prefs.difficulty === "mixed" ? ["easy", "medium", "hard"][Math.floor(Math.random() * 3)] : DB.prefs.difficulty;
-    G.lineup = pickLineup(G.movie, G.diff, rng);
-    Object.assign(G, { stage: 0, wrong: 0, tried: [], over: true, paused: false, lastSec: null, giveUpArmed: false, credit: -1, whoPending: null, frozenP: null, whoAt: 0, seriesHit: false });
-    G.cur = G.mode === "party" && G.pstyle === "turns" ? (G.filmNo - 1) % G.players.length : -1;
-    voiceStop();
-
-    // reset UI
-    $("#cast").className = "cast"; $("#cast").innerHTML = ""; $("#synopsis").hidden = true; $("#synopsisText").textContent = "";
-    $("#tried").hidden = true; $("#coach").hidden = true; $("#guessInput").value = ""; hideSugg(); feedback("");
-    $("#ring").classList.remove("low"); $("#ring").hidden = G.mode === "practice";
-    updateHud(); renderActHeader();
-
-    const label = G.mode === "daily" ? `Daily #${dailyNumber()} · Film ${G.filmNo} of ${DAILY_COUNT}`
-      : G.mode === "practice" ? "Practice film"
-      : G.mode === "party" ? (G.cur >= 0 ? `${G.players[G.cur].name}'s turn · Film ${G.filmNo} of ${G.totalFilms}` : `Film ${G.filmNo} of ${G.totalFilms}`)
-      : `Film ${G.filmNo}`;
-    await Promise.all([preload([...G.lineup.initial, G.lineup.extra].filter(Boolean).map(c => c.photo)), countdown(label)]);
-    if (token !== G.token) return;
-
-    G.lineup.initial.forEach((c, i) => { const el = actorEl(c, i, 3); el.style.animationDelay = `${i * 120}ms`; $("#cast").appendChild(el); });
-    if (G.lineup.extra) { const slot = document.createElement("div"); slot.className = "actor locked"; slot.innerHTML = `<div class="ph"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><em>Enter, stage left</em><small id="slotTimer">${G.mode === "practice" ? "next clue" : `in ${G.stageMs / 1000} seconds`}</small></div><div class="nm"></div>`; $("#cast").appendChild(slot); }
-    G.over = false; G.stageStart = performance.now(); G.filmStart = G.stageStart;
-    if (G.mode === "practice") { G.coachStep = 0; coach(); } else tick();
-    syncVoice();
-    if (matchMedia("(hover: hover)").matches) $("#guessInput").focus({ preventScroll: true });
-    const next = G.deck[0]; if (next) { next.cast.slice(0, 8).forEach(c => { new Image().src = c.photo; }); new Image().src = next.poster; }
-    new Image().src = G.movie.poster;
-  }
-
-  function actorEl(c, i, total, extra = false) {
-    const el = document.createElement("div"); el.className = "actor flip" + (extra ? " extra spot" : "");
-    el.innerHTML = `<div class="ph"><img src="${esc(c.photo)}" alt="Actor photo ${i + 1} of ${total}"></div><div class="nm">${esc(c.name)}</div>`;
-    return el;
-  }
-
-  function renderActHeader() {
-    const a = ACTS[G.stage];
-    $("#actTitle").innerHTML = `${a.n} <em>· ${a.name}</em>`; $("#actHint").textContent = a.hint;
-    $$("#bars b").forEach((b, i) => { b.style.transform = i < G.stage ? "scaleX(1)" : "scaleX(0)"; });
-    $("#nextActBtn").textContent = G.stage === 3 ? "Give up" : "Next act now";
-    $("#nextActBtn").hidden = G.mode === "practice";
-    $("#skipBtn").hidden = G.mode !== "solo" && G.mode !== "party";
-    $("#skipBtn").disabled = G.mode === "solo" && G.skipsLeft <= 0;
-    $("#skipBtn").textContent = G.mode === "party" ? "Skip film" : G.skipsLeft > 0 ? `Skip film · ${G.skipsLeft} left` : "No skips left";
-    updateHintLine(); $("#worthNum").textContent = worth();
-  }
-
-  function renderStage() {
-    const cast = $("#cast");
-    if (G.stage >= 1 && G.lineup.extra && !cast.querySelector(".extra")) {
-      const slot = cast.querySelector(".locked"); const el = actorEl(G.lineup.extra, 3, 4, true);
-      slot ? slot.replaceWith(el) : cast.appendChild(el);
-      $$("#cast .actor img").forEach((img, i) => { img.alt = `Actor photo ${i + 1} of 4`; });
-    }
-    cast.classList.toggle("names", G.stage >= 2);
-    if (G.stage >= 2) $$("#cast .actor img").forEach((img, i) => { img.alt = cast.children[i].querySelector(".nm").textContent; });
-    if (G.stage >= 3 && $("#synopsis").hidden) { cast.classList.add("compact"); $("#synopsis").hidden = false; typewrite($("#synopsisText"), `“${G.movie.plot}”`); }
-    renderActHeader();
-  }
-
-  function typewrite(el, text) {
-    if (rm()) { el.textContent = text; return; }
-    el.textContent = ""; let i = 0; const tk = G.token;
-    (function step() { if (tk !== G.token) return; i = Math.min(text.length, i + 2); el.textContent = text.slice(0, i); if (i < text.length) setTimeout(step, 18); })();
-  }
-
-  function points(now = performance.now()) {
-    const base = ACTS[G.stage].base, left = Math.max(0, 1 - (now - G.stageStart) / G.stageMs);
-    return { base, bonus: G.mode === "practice" ? 0 : Math.round(base * .5 * left), penalty: G.wrong * PENALTY };
-  }
-  const worth = () => { const p = points(); return Math.max(0, p.base + p.bonus - p.penalty); };
-  const mult = () => Math.min(2, 1 + .1 * G.streak);
-
-  function tick() {
-    cancelAnimationFrame(G.raf);
-    if (G.over || G.paused || G.mode === "practice") return;
-    const now = performance.now(), el = now - G.stageStart, left = Math.max(0, G.stageMs - el), secs = Math.ceil(left / 1000);
-    $("#ringNum").textContent = secs; $("#ringProg").style.strokeDashoffset = String(125.66 * (1 - left / G.stageMs));
-    $("#ring").setAttribute("aria-label", `${secs} seconds left in this act`);
-    const low = secs <= 5 && left > 0; $("#ring").classList.toggle("low", low);
-    if (low && secs !== G.lastSec) { G.lastSec = secs; sfx.tick(); buzz(18); }
-    const bar = $$("#bars b")[G.stage]; if (bar) bar.style.transform = `scaleX(${Math.min(1, el / G.stageMs)})`;
-    $("#worthNum").textContent = worth();
-    const st = document.getElementById("slotTimer"); if (st && G.stage === 0) st.textContent = `in ${secs} second${secs === 1 ? "" : "s"}`;
-    if (left <= 0) { advance(); return; }
-    G.raf = requestAnimationFrame(tick);
-  }
-
-  function advance() {
-    if (G.over) return;
-    if (G.stage >= 3) { endRound(false, "time"); return; }
-    G.stage += 1; G.stageStart = performance.now(); G.lastSec = null; G.giveUpArmed = false;
-    $("#ring").classList.remove("low"); sfx.whoosh(); renderStage(); tick();
-  }
-
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden && G.autoBase) { stopAuto(); G.autoResume = true; }
-    else if (!document.hidden && G.autoResume && onReveal()) { G.autoResume = false; startAuto(); }
-    if (G.over || G.mode === "practice" || G.whoPending) { if (!document.hidden) syncVoice(); else voiceStop(); return; }
-    if (document.hidden) { G.paused = true; G.pausedAt = performance.now(); cancelAnimationFrame(G.raf); voiceStop(); }
-    else if (G.paused) { const d = performance.now() - G.pausedAt; G.stageStart += d; G.filmStart += d; G.paused = false; toast("Paused while you were away. Back to the show."); tick(); syncVoice(); }
-  });
-
-  // ================= practice coach =================
-  const COACH = [
-    "These 3 actors were all in one film. Recognise any of them?",
-    "Every {s} seconds a new clue appears. First, a fourth face joins in.",
-    "Then everyone's name is revealed.",
-    "Last comes the plot. The fewer clues you need, the more points you score.",
-    "Now type the film's name and pick it from the list. Take your time, this one isn't scored.",
-  ];
-  function coach() {
-    $("#coach").hidden = false; $("#coachText").textContent = COACH[G.coachStep].replace("{s}", DB.prefs.stageSec);
-    $("#coachStep").textContent = `Tip ${G.coachStep + 1} of ${COACH.length}`;
-    $("#coachNext").hidden = G.coachStep === COACH.length - 1;
-    if (G.coachStep === COACH.length - 1) $("#guessInput").focus({ preventScroll: true });
-  }
-  $("#coachNext").addEventListener("click", () => {
-    G.coachStep += 1; if (G.coachStep >= 1 && G.coachStep <= 3) { G.stage = G.coachStep; sfx.whoosh(); renderStage(); }
-    coach();
-  });
-
-  // ================= guessing =================
-  function feedback(msg, kind = "") { const f = $("#feedback"); f.textContent = msg; f.className = "feedback" + (kind ? " " + kind : ""); }
-  function updateHintLine() {
-    const left = maxWrong() - G.wrong;
-    $("#hintLine").textContent = G.mode === "practice" ? "Practice · not scored" : `${left} guess${left === 1 ? "" : "es"} left · worth up to ${worth()}`;
-  }
-  function renderTried() { $("#tried").hidden = !G.tried.length; $("#tried").innerHTML = "Not it:" + G.tried.map(t => `<s>${esc(t)}</s>`).join(""); }
-
-  function submitGuess(text, year) {
-    if (G.over) return;
-    text = (text ?? $("#guessInput").value).trim();
-    if (!text) { feedback("Type a film title first.", "bad"); return; }
-    hideSugg();
-    if (matches(text, G.movie)) {
-      if (year && G.movie.year && Math.abs(year - G.movie.year) > 1) { soClose("So close! Right title, different year."); return; }
-      correctGuess(); return;
-    }
-    if (seriesMatch(text, G.movie)) { correctGuess(true); return; }
-    if (universeMatch(text, G.movie)) { soClose("So close! Right universe, different series. Think again."); return; }
-    if (nearMiss(text, G.movie)) { soClose("So close! It's a related film. Think again."); return; }
-    G.wrong += 1; G.tried.push(text); renderTried();
-    const inp = $("#guessInput"); inp.value = ""; inp.classList.remove("shake"); void inp.offsetWidth; inp.classList.add("shake");
-    sfx.wrong(); buzz([40, 50, 40]);
-    if (G.mode !== "practice") { const f = document.createElement("span"); f.className = "float"; f.textContent = `−${PENALTY}`; $(".guess-row").appendChild(f); setTimeout(() => f.remove(), 1000); }
-    if (G.mode === "practice") { feedback(G.wrong >= 2 ? `Not it. Hint: it starts with “${G.movie.title[0]}”.` : "Not it. Try again.", "bad"); if (G.wrong >= 4) endRound(false, "guesses"); return; }
-    if (G.wrong >= maxWrong()) { endRound(false, "guesses"); return; }
-    feedback(`Not it. ${maxWrong() - G.wrong} guess${maxWrong() - G.wrong === 1 ? "" : "es"} left.`, "bad"); updateHintLine(); $("#worthNum").textContent = worth();
-  }
-  function correctGuess(series = false) {
-    if (G.over || G.whoPending) return;
-    G.seriesHit = !!series;
-    if (G.mode === "party" && G.pstyle === "shout") { askWho(); return; }
-    endRound(true);
-  }
-  function askWho() {
-    const now = performance.now();
-    G.whoPending = { at: now }; G.frozenP = points(now); cancelAnimationFrame(G.raf); voiceStop(); hideSugg();
-    sfx.near(); buzz(40);
-    $("#whoKicker").textContent = `Correct! It's ${G.movie.title}`;
-    $("#whoPts").textContent = `Worth ${Math.round(Math.max(0, G.frozenP.base + G.frozenP.bonus - G.frozenP.penalty) * (G.seriesHit ? SERIES_SHARE : 1) * (DIFF_MULT[G.diff] || 1))} points${G.seriesHit ? " · right series" : ""}`;
-    $("#whoList").innerHTML = G.players.map((pl, i) => `<button data-who="${i}"><span class="dot" style="background:${pl.color}" aria-hidden="true"></span>${esc(pl.name)}</button>`).join("");
-    $("#whoSheet").hidden = false;
-  }
-  $("#whoList").addEventListener("click", e => {
-    const b = e.target.closest("button[data-who]"); if (!b) return;
-    $("#whoSheet").hidden = true; G.credit = +b.dataset.who; G.whoAt = G.whoPending.at; G.whoPending = null; endRound(true);
-  });
-  $("#whoNobody").addEventListener("click", () => {
-    $("#whoSheet").hidden = true; const d = performance.now() - G.whoPending.at;
-    G.stageStart += d; G.filmStart += d; G.whoPending = null; G.frozenP = null; feedback("Keep going!"); tick(); syncVoice();
-  });
-  function soClose(msg) { $("#guessInput").value = ""; feedback(msg, "near"); sfx.near(); buzz(25); }
-
-  function renderSugg() {
-    const q = normalize($("#guessInput").value); if (q.length < 2) { hideSugg(); return; }
-    const out = [];
-    for (const t of TITLES) { const n = normalize(t.title); const i = n.indexOf(q); if (i < 0) continue; out.push([i === 0 ? 0 : n.includes(" " + q) ? 1 : 2, t]); }
-    out.sort((a, b) => a[0] - b[0] || a[1].title.localeCompare(b[1].title));
-    const list = out.slice(0, 5).map(x => x[1]); if (!list.length) { hideSugg(); return; }
-    $("#sugg").innerHTML = list.map(t => `<button type="button" role="option" data-t="${esc(t.title)}" data-y="${t.year ?? ""}">${esc(t.title)}<span>${t.series ? "series" : t.year ?? ""}</span></button>`).join("");
-    $("#sugg").hidden = false;
-  }
-  function hideSugg() { $("#sugg").hidden = true; $("#sugg").innerHTML = ""; }
-  $("#guessInput").addEventListener("input", renderSugg);
-  $("#guessInput").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); submitGuess(); } if (e.key === "Escape") hideSugg(); });
-  $("#guessBtn").addEventListener("click", () => submitGuess());
-  $("#sugg").addEventListener("click", e => { const b = e.target.closest("button[data-t]"); if (!b) return; $("#guessInput").value = b.dataset.t; submitGuess(b.dataset.t, Number(b.dataset.y) || null); });
-  document.addEventListener("click", e => { if (!e.target.closest(".guess-row")) hideSugg(); });
-  $("#nextActBtn").addEventListener("click", () => {
-    if (G.over) return;
-    if (G.stage < 3) { advance(); return; }
-    if (!G.giveUpArmed) { G.giveUpArmed = true; $("#nextActBtn").textContent = "Tap again to give up"; setTimeout(() => { G.giveUpArmed = false; if (!G.over && G.stage === 3) $("#nextActBtn").textContent = "Give up"; }, 3000); return; }
-    endRound(false, "gaveup");
-  });
-  $("#skipBtn").addEventListener("click", () => {
-    if (G.over || G.whoPending) return;
-    if (G.mode === "party") { endRound(false, "skipped"); return; }
-    if (G.mode !== "solo" || G.skipsLeft <= 0) return;
-    G.skipsLeft -= 1; endRound(false, "skipped");
-  });
-  $("#quitBtn").addEventListener("click", () => {
-    if (!G.over && G.mode !== "practice" && !$("#quitBtn").dataset.armed) { $("#quitBtn").dataset.armed = "1"; toast("Tap ✕ again to leave. This game won't be saved."); setTimeout(() => { delete $("#quitBtn").dataset.armed; }, 3000); return; }
-    delete $("#quitBtn").dataset.armed; G.over = true; G.token++; cancelAnimationFrame(G.raf); $("#countdown").hidden = true; $("#whoSheet").hidden = true; G.whoPending = null; voiceStop(); goHome();
-  });
-
-  // ================= HUD =================
-  function updateHud() {
-    const solo = G.mode === "solo";
-    $("#hudLives").hidden = !solo; $("#hudMode").hidden = solo;
-    $("#hudLives").innerHTML = Array.from({ length: LIVES }, (_, i) => starSvg(i >= G.lives)).join("");
-    $("#hudLives").setAttribute("aria-label", `${G.lives} of ${LIVES} lives left`);
-    $("#hudMode").textContent = G.mode === "daily" ? `Daily · ${G.filmNo || 1}/${DAILY_COUNT}` : G.mode === "party" ? `Film ${G.filmNo || 1}/${G.totalFilms}` : "Practice";
-    if (G.mode === "party") {
-      if (G.cur >= 0) { const pl = G.players[G.cur]; $("#hudScore").textContent = pl.score.toLocaleString(); $("#hudStreak").textContent = `${pl.name}'s turn`; }
-      else { const lead = [...G.players].sort((a, b) => b.score - a.score)[0]; $("#hudScore").textContent = lead.score.toLocaleString(); $("#hudStreak").textContent = lead.score ? `${lead.name} leads` : "Shout it out!"; }
-      return;
-    }
-    $("#hudScore").textContent = G.score.toLocaleString();
-    $("#hudStreak").textContent = G.streak ? `×${mult().toFixed(1)} streak` : "No streak yet";
-  }
-
-  // ================= end of round =================
-  function recordStats(m, won) {
-    if (G.mode === "practice" || G.mode === "party") return;
-    const s = DB.stats; s.seen++; if (won) { s.won++; s.clueSum += G.stage + 1; }
-    const bump = (obj, k) => { obj[k] = obj[k] || { seen: 0, won: 0 }; obj[k].seen++; if (won) obj[k].won++; };
-    bump(s.ind, m.industry); bump(s.dec, decadeOf(m.year)); save();
-  }
-
-  function endRound(won, reason) {
-    if (G.over) return;
-    G.over = true; cancelAnimationFrame(G.raf); hideSugg(); $("#guessInput").blur(); $("#coach").hidden = true; voiceStop();
-    const p = G.frozenP || points(), m = G.mode === "party" ? 1 : mult();
-    let pts = 0, badge = null, lostStar = false;
-    if (G.mode === "practice") { showReveal({ won, reason, pts: 0, p, m: 1 }); return; }
-    if (reason === "skipped") track("film_skipped");
-    else if (won) { track(`film_guessed_stage_${G.stage + 1}`); if (G.seriesHit) track("film_series_match"); }
-    else track("film_missed");
-    if (G.mode === "party") {
-      const who = G.cur >= 0 ? G.cur : G.credit;
-      if (won && who >= 0) {
-        pts = Math.round(Math.max(0, p.base + p.bonus - p.penalty) * (G.seriesHit ? SERIES_SHARE : 1) * (DIFF_MULT[G.diff] || 1)); const pl = G.players[who];
-        pl.score += pts; pl.nailed += 1; if (G.stage === 0) pl.first += 1; if (G.stage === 3) pl.last += 1;
-        pl.fastest = Math.min(pl.fastest, (G.whoAt || performance.now()) - G.filmStart);
-        G.credit = who;
-      }
-      updateHud(); showReveal({ won: won && who >= 0, reason: won && who < 0 ? "nobody" : reason, pts, p, m: 1 }); return;
-    }
-    if (won) {
-      pts = Math.round(Math.max(0, p.base + p.bonus - p.penalty) * m * (G.seriesHit ? SERIES_SHARE : 1) * (DIFF_MULT[G.diff] || 1));
-      G.score += pts; G.streak += 1; G.runBest = Math.max(G.runBest, G.streak); G.nailed.push(G.movie);
-      badge = STREAK_BADGES[G.streak] || null;
-    } else if (reason === "skipped") {
-      G.streak = 0; G.skipped.push(G.movie);
-      DB.stats.skips = (DB.stats.skips || 0) + 1; save();
-      updateHud(); showReveal({ won, reason, pts, p, m }); return;
-    } else {
-      G.streak = 0; G.missed.push(G.movie);
-      if (G.mode === "solo") { G.lives -= 1; lostStar = true; }
-    }
-    if (G.mode === "daily") G.results.push({ id: G.movie.id, title: G.movie.title, year: G.movie.year, won, clue: won ? G.stage + 1 : 0, pts });
-    recordStats(G.movie, won); updateHud();
-    showReveal({ won, reason, pts, p, m, badge, lostStar });
-  }
-
-  let countToken = 0;
-  function countUp(el, to, ms = 900) {
-    const tk = ++countToken;
-    if (rm() || to <= 0) { el.textContent = `+${to}`; return; }
-    const start = performance.now(); (function f(now) { if (tk !== countToken) return; const k = Math.min(1, (now - start) / ms); el.textContent = `+${Math.round(to * (1 - Math.pow(1 - k, 3)))}`; if (k < 1) requestAnimationFrame(f); })(start);
-  }
-
-  function showReveal({ won, reason, pts, p, m, badge, lostStar }) {
-    const mv = G.movie, poster = $("#revPoster");
-    poster.src = mv.poster; poster.alt = `${mv.title} poster`;
-    poster.className = "poster" + (won ? " flip" : " miss"); $("#revShimmer").hidden = true;
-    $("#revTitle").textContent = mv.title;
-    $("#revMeta").textContent = [mv.year, INDUSTRY_NAME[mv.industry], mv.director].filter(Boolean).join(" · ");
-    let tier, tierCls = "tier";
-    if (G.mode === "practice") { tier = won ? "You've got it. You're ready for the real show." : "Now you know. You're ready for the real show."; }
-    else if (reason === "skipped") { tier = G.mode === "party" ? "Skipped" : `Skipped · ${G.skipsLeft} skip${G.skipsLeft === 1 ? "" : "s"} left`; tierCls += " miss"; }
-    else if (!won) { tier = reason === "guesses" ? "Out of guesses. Now you know." : reason === "gaveup" ? "Curtain down. Now you know." : "Out of time. Now you know."; tierCls += " miss"; }
-    else if (G.stage === 0) tier = "Standing ovation";
-    else if (G.stage <= 2) tier = "Curtain call";
-    else tier = "Just made it";
-    if (won && G.mode !== "practice" && G.movie.s && SERIES[G.movie.s]) tier = G.seriesHit ? `Right series! It was this one · ${Math.round(SERIES_SHARE * 100)}% points` : `${tier} · Exact film!`;
-    if (G.mode === "party" && won) tier = `${G.players[G.credit].name} · ${tier}`;
-    $("#revTier").className = tierCls; $("#revTier").textContent = tier;
-
-    if (won && G.mode !== "practice") {
-      $("#revBreak").hidden = false;
-      const dm = DIFF_MULT[G.diff] || 1;
-      const last = G.mode === "party" ? [esc(G.players[G.credit].name), dm !== 1 ? `Point to · ×${dm}` : "Point to"] : [`×${(m * dm).toFixed(1)}`, dm !== 1 ? "Streak × super easy" : "Streak"];
-      const third = G.seriesHit && !p.penalty ? [`×${SERIES_SHARE}`, "Series"] : [p.penalty ? `−${p.penalty}` : "0", `${G.wrong} miss${G.wrong === 1 ? "" : "es"}`, p.penalty ? "var(--coral)" : ""];
-      $("#revBreak").innerHTML = [[p.base, `${roman(G.stage)} clue`], [`+${p.bonus}`, "Speed"], third, last]
-        .map(([v, l, c]) => `<div><b style="${c ? `color:${c}` : ""}">${v}</b><small>${l}</small></div>`).join("");
-    } else $("#revBreak").hidden = true;
-    const ptsEl = $("#revPts"); ptsEl.style.color = won ? "var(--gold)" : "var(--dim)"; ptsEl.hidden = G.mode === "practice";
-    countUp(ptsEl, pts);
-    $("#revTotal").textContent = G.mode === "practice" || G.mode === "party" ? "" : `Total ${G.score.toLocaleString()}`;
-    renderBoard();
-    $("#revBadge").innerHTML = "";
-    $("#revLives").hidden = G.mode !== "solo";
-    $("#revLives").innerHTML = Array.from({ length: LIVES }, (_, i) => i < G.lives ? starSvg(false) : (lostStar && i === G.lives ? starSvg(false, "drop") : starSvg(true))).join("");
-    $("#revLives").setAttribute("aria-label", `${G.lives} of ${LIVES} lives left`);
-    $("#revStarring").innerHTML = "Starring " + mv.cast.slice(0, 6).map(c => `<b>${esc(c.name)}</b>`).join(", ");
-
-    const nb = $("#revNextLbl");
-    if (G.mode === "practice") nb.textContent = "Go to the main menu";
-    else if (G.mode === "daily") nb.textContent = G.filmNo < DAILY_COUNT ? `Next film (${G.filmNo + 1} of ${DAILY_COUNT})` : "See today's result";
-    else if (G.mode === "party") nb.textContent = G.filmNo >= G.totalFilms ? "See the winners" : G.pstyle === "turns" ? `Pass to ${G.players[G.filmNo % G.players.length].name}` : `Next film (${G.filmNo + 1} of ${G.totalFilms})`;
-    else nb.textContent = G.lives > 0 ? "Next film" : "See the awards";
-    show("revealScreen");
-
-    // celebration, scaled to how early the guess was
-    if (won && G.mode !== "practice") {
-      if (G.stage === 0) { winSound(3); buzz([90, 50, 90, 50, 200]); confetti(180); }
-      else if (G.stage <= 2) { winSound(2); buzz(60); if (!rm()) $("#revShimmer").hidden = false; }
-      else { winSound(1); buzz(30); }
-    } else if (won) { winSound(2); confetti(90); }
-    else if (reason === "skipped") { sfx.whoosh(); }
-    else { sfx.miss(); buzz(120); }
-    // auto-advance to the next film after 3 seconds (not after the last film)
-    stopAuto(); G.autoResume = false;
-    startAuto();
-    if (badge) setTimeout(() => { $("#revBadge").innerHTML = `<div class="badge">${starSvg()}<b>${badge}</b><span class="muted" style="font-size:13px">${G.streak} in a row</span></div>`; sfx.badge(); buzz([30, 30, 60]); }, 900);
-    setTimeout(() => $("#revNext").focus({ preventScroll: true }), 200);
-  }
-
-  function startAuto() {
-    const nb = $("#revNextLbl");
-    const more = (G.mode === "solo" && G.lives > 0) || (G.mode === "daily" && G.filmNo < DAILY_COUNT) || (G.mode === "party" && G.filmNo < G.totalFilms);
-    if (!more || DB.prefs.autoNext === false) return;
-    if (document.hidden) { G.autoResume = true; return; }
-    {
-      const tk = G.token, base = nb.textContent, btn = $("#revNext"); let left = 3;
-      btn.classList.remove("auto"); void btn.offsetWidth; btn.classList.add("auto");
-      nb.textContent = `${base} · ${left}`; $("#revStay").hidden = false;
-      G.autoTick = setInterval(() => { left -= 1; if (left > 0) nb.textContent = `${base} · ${left}`; }, 1000);
-      G.autoNext = setTimeout(() => { stopAuto(); if (tk === G.token && $("#revealScreen").classList.contains("active")) $("#revNext").click(); }, 3000);
-      G.autoBase = base;
-    }
-  }
-
-  function stopAuto(keepLabel) {
-    clearTimeout(G.autoNext); clearInterval(G.autoTick); $("#revNext").classList.remove("auto"); $("#revStay").hidden = true;
-    if (G.autoBase && !keepLabel) { $("#revNextLbl").textContent = G.autoBase; } G.autoBase = null;
-  }
-  $("#revStay").addEventListener("click", () => { stopAuto(); G.autoResume = false; toast("Take your time. Tap Next film when you're ready."); });
-  $("#revNext").addEventListener("click", () => {
-    stopAuto(); G.autoResume = false;
-    if (G.mode === "practice") { goHome(); toast("You're all set. Enjoy the show!"); return; }
-    if (G.mode === "daily") { if (G.filmNo < DAILY_COUNT) { show("gameScreen"); startRound(); } else finishDaily(); return; }
-    if (G.mode === "party") { if (G.filmNo < G.totalFilms) { show("gameScreen"); startRound(); } else showPodium(); return; }
-    if (G.lives <= 0) { gameOver(); return; }
-    show("gameScreen"); startRound();
-  });
-
-  // ================= report a problem =================
-  const REPORT_KEY = "castguess.v3.reports", APP_VERSION = "3.8";
-  let reportReason = "";
-  $("#reportBtn").addEventListener("click", () => {
-    stopAuto(); G.autoResume = false; reportReason = "";
-    $("#reportFilm").textContent = `${G.movie.title} (${G.movie.year ?? ""})`;
-    $$("#reportReasons button").forEach(b => b.setAttribute("aria-pressed", "false"));
-    $("#reportNote").value = ""; $("#reportSend").disabled = true; $("#reportSheet").hidden = false;
-  });
-  $("#reportReasons").addEventListener("click", e => {
-    const b = e.target.closest("button[data-reason]"); if (!b) return;
-    reportReason = b.dataset.reason; $$("#reportReasons button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); $("#reportSend").disabled = false;
-  });
-  $("#reportSheet").addEventListener("click", e => { if (e.target.id === "reportSheet" || e.target.closest("[data-close]")) $("#reportSheet").hidden = true; });
-  $("#reportSend").addEventListener("click", () => {
-    const m = G.movie, note = $("#reportNote").value.trim();
-    const cast = G.lineup ? [...G.lineup.initial, G.lineup.extra].filter(Boolean).map(c => `${c.name} (#${c.order})`).join(", ") : "";
-    const report = { id: m.id, title: m.title, year: m.year, reason: reportReason, note, clue: G.stage + 1, mode: G.mode, difficulty: G.diff, at: new Date().toISOString(), v: APP_VERSION };
-    try { const list = JSON.parse(localStorage.getItem(REPORT_KEY) || "[]"); list.push(report); localStorage.setItem(REPORT_KEY, JSON.stringify(list.slice(-200))); } catch { /* ignore */ }
-    const title = `Bad clue: ${m.title} (${m.year ?? "?"}) – ${reportReason}`;
-    const body = [`**Film:** ${m.title} (${m.year ?? "?"}), TMDB id ${m.id}`, `**Problem:** ${reportReason}`, note ? `**Note:** ${note}` : "", `**Ended at clue:** ${G.stage + 1} of 4`, `**Actors shown:** ${cast}`, `**Mode / difficulty:** ${G.mode} / ${G.diff}`, `**App version:** ${APP_VERSION}`, `https://www.themoviedb.org/movie/${m.id}`].filter(Boolean).join("\n");
-    window.open(`https://github.com/shyam310195/castguess/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=bad-clue`, "_blank", "noopener");
-    track("report_problem");
-    $("#reportSheet").hidden = true; toast("Thanks, reported. It helps fix the film list.");
-  });
-
-  // ================= party scoreboard & podium =================
-  function ranked() { return G.players.map((pl, i) => ({ ...pl, i })).sort((a, b) => b.score - a.score || b.nailed - a.nailed); }
-  function renderBoard() {
-    const board = $("#revBoard");
-    if (G.mode !== "party") { board.hidden = true; return; }
-    const r = ranked(), prev = G.prevRanks || {};
-    board.hidden = false;
-    board.innerHTML = r.map((pl, k) => {
-      const was = prev[pl.i], chg = was == null ? "" : was > k ? `<span class="up">▲${was - k}</span>` : was < k ? `<span class="down">▼${k - was}</span>` : "";
-      return `<div class="bro${k === 0 && pl.score > 0 ? " lead" : ""}" style="animation-delay:${k * 60}ms"><span class="rank">${k + 1}</span><span class="dot" style="background:${pl.color}" aria-hidden="true"></span><span>${esc(pl.name)}</span><b>${pl.score}</b><span class="chg">${chg}</span></div>`;
-    }).join("");
-    G.prevRanks = Object.fromEntries(r.map((pl, k) => [pl.i, k]));
-  }
-  function showPodium() {
-    track(`game_over_films_${filmsBucket(G.filmNo)}`);
-    const r = ranked(), top = r[0];
-    const tie = r.length > 1 && r[1].score === top.score;
-    $("#podTitle").textContent = top.score === 0 ? "Nobody… yet" : tie ? "It's a tie!" : top.name;
-    $("#podSub").textContent = top.score === 0 ? "No films guessed. Rematch?" : tie ? `${r.filter(x => x.score === top.score).map(x => x.name).join(" and ")} share the crown with ${top.score} points` : `${top.score} points · ${top.nailed} film${top.nailed === 1 ? "" : "s"} guessed`;
-    const order = [r[1], r[0], r[2]];
-    const heights = [96, 132, 72];
-    $("#podium").innerHTML = order.map((pl, k) => pl ? `<div class="col"><span class="dot" style="background:${pl.color};width:16px;height:16px" aria-hidden="true"></span><div class="nm">${esc(pl.name)}</div><div class="muted" style="font-size:13px">${pl.score}</div><div class="blk" style="height:${heights[k]}px;animation-delay:${k * 150}ms">${[2, 1, 3][k]}</div></div>` : `<div></div>`).join("");
-    $("#podBoard").innerHTML = r.slice(3).map((pl, k) => `<div class="bro"><span class="rank">${k + 4}</span><span class="dot" style="background:${pl.color}" aria-hidden="true"></span><span>${esc(pl.name)}</span><b>${pl.score}</b><span></span></div>`).join("");
-    const best = (key, cmp) => { const c = G.players.filter(pl => cmp(pl[key])); if (!c.length) return null; return c.sort((a, b) => key === "fastest" ? a[key] - b[key] : b[key] - a[key])[0]; };
-    const quick = best("fastest", v => v < Infinity), hero = best("first", v => v > 0), nail = best("last", v => v > 0);
-    $("#podAwards").innerHTML = [
-      ["Quickest draw", quick ? `${quick.name} · ${(quick.fastest / 1000).toFixed(1)}s` : "Nobody this time"],
-      ["Clue 1 hero", hero ? `${hero.name} · ${hero.first} on the first clue` : "Nobody this time"],
-      ["Nail-biter", nail ? `${nail.name} · ${nail.last} on the plot clue` : "Nobody this time"],
-    ].map(([a, b]) => `<div><b>${a}</b><span>${esc(b)}</span></div>`).join("");
-    show("podiumScreen");
-    if (top.score > 0) { confetti(200); winSound(3); buzz([90, 50, 90, 50, 200]); } else sfx.chime();
-  }
-  $("#podRematch").addEventListener("click", () => startGame("party"));
-  $("#podHome").addEventListener("click", goHome);
-
-  // ================= game over =================
-  function shareText(text) {
-    track("share_clicked");
-    if (navigator.share) { navigator.share({ text }).catch(() => {}); return; }
-    copyText(text);
-  }
-  function copyText(text) {
-    const done = () => toast("Copied. Paste it anywhere to share.");
-    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done)); }
-    else fallbackCopy(text, done);
-  }
-  function fallbackCopy(text, done) {
-    const ta = document.createElement("textarea"); ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select();
-    try { document.execCommand("copy"); done(); } catch { toast("Couldn't copy. Select the text and copy it yourself."); } ta.remove();
-  }
-  function gameOver() {
-    track(`game_over_films_${filmsBucket(G.filmNo)}`);
-    const prev = DB.records.best, isBest = G.score > prev;
-    if (isBest) DB.records.best = G.score;
-    if (G.runBest > DB.records.bestStreak) DB.records.bestStreak = G.runBest; save();
-    $("#overName").textContent = DB.prefs.nickname || "You";
-    $("#overScore").textContent = G.score.toLocaleString();
-    $("#overAward").innerHTML = isBest && G.score > 0 ? `<div class="award"><div class="label gold">New award</div><div class="title" style="font-size:24px;margin-top:6px">Personal best</div><div class="muted" style="font-size:13px;margin-top:4px">Previous best: ${prev.toLocaleString()}</div></div>` : "";
-    $("#overNailed").textContent = `${G.nailed.length} of ${G.nailed.length + G.missed.length + G.skipped.length}`;
-    $("#overStreak").textContent = G.runBest;
-    $("#overLists").innerHTML = (G.nailed.length ? `<div><span class="label">Nailed</span><br>${G.nailed.map(m => `<b>${esc(m.title)}</b>`).join(", ")}</div>` : "") +
-      (G.missed.length ? `<div style="margin-top:10px"><span class="label">Missed</span><br>${G.missed.map(m => `${esc(m.title)} (${m.year ?? ""})`).join(", ")}</div>` : "") +
-      (G.skipped.length ? `<div style="margin-top:10px"><span class="label">Skipped</span><br>${G.skipped.map(m => `${esc(m.title)} (${m.year ?? ""})`).join(", ")}</div>` : "");
-    show("overScreen");
-    if (isBest && G.score > 0) { confetti(140); winSound(3); buzz([80, 40, 160]); } else sfx.chime();
-  }
-  $("#overAgain").addEventListener("click", () => startGame("solo"));
-  $("#overHome").addEventListener("click", goHome);
-  $("#overShare").addEventListener("click", () => shareText(`I scored ${G.score.toLocaleString()} on CastGuess and named ${G.nailed.length} film${G.nailed.length === 1 ? "" : "s"} from their cast. Can you beat me? 🎬`));
-
-  // ================= daily =================
-  const SQ = ["⬛", "🟨", "🟧", "🟫", "🟥"];
-  function finishDaily() {
-    track("daily_done");
-    const score = G.results.reduce((a, r) => a + r.pts, 0);
-    DB.daily[todayKey()] = { n: dailyNumber(), results: G.results, score }; save(); showDailyResult();
-    if (G.results.filter(r => r.won).length >= 4) { confetti(150); winSound(3); } else winSound(1);
-  }
-  function dailyShareText(d) {
-    const won = d.results.filter(r => r.won).length, first = d.results.filter(r => r.clue === 1).length;
-    return `CastGuess Daily #${d.n} · ${won}/${DAILY_COUNT}${first ? ` · ${first} on the first clue` : ""}\n${d.results.map(r => SQ[r.clue]).join("")}\n${d.score} points`;
-  }
-  function showDailyResult() {
-    const d = DB.daily[todayKey()]; if (!d) { goHome(); return; }
-    const won = d.results.filter(r => r.won).length, first = d.results.filter(r => r.clue === 1).length;
-    $("#dailyTitle").textContent = `#${d.n} · ${won} of ${DAILY_COUNT}`;
-    $("#dailySub").textContent = `${d.score} points${first ? ` · ${first} on the first clue` : ""}`;
-    $("#dailySquares").innerHTML = d.results.map(r => `<i class="sq${r.clue}" aria-label="${esc(r.title)}: ${r.won ? `solved on clue ${r.clue}` : "missed"}">${r.won ? r.clue : "–"}</i>`).join("");
-    $("#dailyFilms").innerHTML = d.results.map(r => `${r.won ? "<b>" : ""}${esc(r.title)}${r.won ? "</b>" : ""} <span style="color:var(--dim)">${r.year ?? ""}</span>`).join(" · ");
-    $("#dailyShare").textContent = dailyShareText(d);
-    show("dailyScreen");
-  }
-  $("#dailyShareBtn").addEventListener("click", () => { const d = DB.daily[todayKey()]; if (d) shareText(dailyShareText(d)); });
-  $("#dailyCopyBtn").addEventListener("click", () => { track("share_clicked"); const d = DB.daily[todayKey()]; if (d) copyText(dailyShareText(d)); });
-
-  // ================= stats =================
-  function showStats() {
-    const s = DB.stats, acc = s.seen ? Math.round(100 * s.won / s.seen) : 0;
-    $("#statsGrid").innerHTML = [["Films guessed", s.won], ["Films seen", s.seen], ["Accuracy", `${acc}%`], ["Avg. clue needed", s.won ? (s.clueSum / s.won).toFixed(1) : "–"], ["Best score", DB.records.best.toLocaleString()], ["Best streak", DB.records.bestStreak], ["Films skipped", s.skips || 0]]
-      .map(([l, v]) => `<div class="stat"><small>${l}</small><b>${v}</b></div>`).join("");
-    $("#statsInd").innerHTML = ["hollywood", "bollywood"].map(k => { const x = s.ind[k] || { seen: 0, won: 0 }; const pct = x.seen ? Math.round(100 * x.won / x.seen) : 0;
-      return `<div class="bar-row"><span>${INDUSTRY_NAME[k]}</span><span class="track"><b style="width:${pct}%"></b></span><span style="text-align:right">${x.seen ? pct + "%" : "–"}</span></div>`; }).join("");
-    const decs = Object.entries(s.dec).filter(([, v]) => v.seen >= 3).sort((a, b) => b[1].won / b[1].seen - a[1].won / a[1].seen);
-    $("#statsDecade").innerHTML = decs.length ? `<b>${decs[0][0]}</b>: ${Math.round(100 * decs[0][1].won / decs[0][1].seen)}% of ${decs[0][1].seen} films` : "Play a few more films to find your best decade.";
-    $("#resetStats").textContent = "Reset stats"; show("statsScreen");
-  }
-  $("#resetStats").addEventListener("click", e => {
-    if (e.target.textContent !== "Tap again to reset") { e.target.textContent = "Tap again to reset"; return; }
-    DB.stats = DEFAULTS().stats; DB.records = DEFAULTS().records; save(); showStats(); toast("Stats reset.");
-  });
-
-  // ================= settings =================
-  function syncSwitches() { $("#swAuto").setAttribute("aria-checked", String(DB.prefs.autoNext !== false)); $("#swSound").setAttribute("aria-checked", String(DB.prefs.sound)); $("#swVib").setAttribute("aria-checked", String(DB.prefs.vibrate)); $("#swRm").setAttribute("aria-checked", String(DB.prefs.reduceMotion)); }
-  function showSettings() {
-    syncSeenBtn();
-    setPressed("#setIndustries", "ind", DB.prefs.industries);
-    $$("#setDiff button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === DB.prefs.difficulty)));
-    $$("#setTime button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.v === DB.prefs.stageSec)));
-    updateYearUI();
-    $("#setNick").value = DB.prefs.nickname; syncSwitches(); syncVoiceUI(); show("settingsScreen");
-  }
-  $("#setNick").addEventListener("change", e => { DB.prefs.nickname = e.target.value.trim(); save(); });
-  $("#swAuto").addEventListener("click", () => { DB.prefs.autoNext = DB.prefs.autoNext === false; save(); syncSwitches(); });
-  [["#swSound", "sound"], ["#swVib", "vibrate"], ["#swRm", "reduceMotion"]].forEach(([id, k]) => $(id).addEventListener("click", () => { DB.prefs[k] = !DB.prefs[k]; save(); syncSwitches(); applyMotion(); if (k === "sound" && DB.prefs.sound) sfx.chime(); if (k === "vibrate") buzz(40); }));
-  $("#replayTutorial").addEventListener("click", startOnboarding);
-  function syncSeenBtn() { const n = Object.keys(seenMap()).length; $("#resetSeen").textContent = n ? `Reset seen films (${n} seen)` : "Reset seen films (none yet)"; $("#resetSeen").disabled = !n; }
-  $("#resetSeen").addEventListener("click", e => {
-    if (!e.target.dataset.armed) { e.target.dataset.armed = "1"; e.target.textContent = "Tap again to reset"; setTimeout(() => { delete e.target.dataset.armed; syncSeenBtn(); }, 3000); return; }
-    delete e.target.dataset.armed; try { localStorage.removeItem(SEEN_KEY); } catch { /* ignore */ } syncSeenBtn(); toast("Seen films reset. Every film is fresh again.");
-  });
-
-  // ================= boot =================
-  applyMotion();
-  if (!ALL.length) { document.body.innerHTML = '<p style="padding:24px;line-height:1.6">No film data found. The app needs <b>movies.js</b> in the same folder as index.html (app_v3). If it is there, reload with Cmd + Shift + R to clear the old copy.</p>'; return; }
-  // once-a-day "returning player" ping
-  try { const today = todayKey(), last = localStorage.getItem("castguess.v3.lastVisit"); if (DB.prefs.onboarded && last && last !== today) track("return_visit"); localStorage.setItem("castguess.v3.lastVisit", today); } catch { /* ignore */ }
-  DB.prefs.onboarded ? goHome() : startOnboarding();
-})();
-</script>
+<script src="packs/manifest.js?v=4.1"></script>
+<script src="core.js?v=4.1"></script>
+<script src="packs.js?v=4.1"></script>
+<script src="game.js?v=4.1"></script>
+<script src="app.js?v=4.1"></script>
 </body>
 </html>

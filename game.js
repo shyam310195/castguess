@@ -59,8 +59,9 @@ async function startGame(mode, ids) {
   if (mode === "party") {
     const pp = DB.prefs.party;
     G.players = partyNames().map((name, i) => ({ name, color: PCOLORS[i], score: 0, nailed: 0, first: 0, last: 0, fastest: Infinity }));
-    G.pstyle = pp.style; G.totalRounds = pp.style === "shout" ? pp.films : pp.films * pp.count; G.prevRanks = null;
-  }
+    G.pstyle = pp.style; G.totalRounds = pp.rounds || Infinity; G.prevRanks = null;
+  } else if (mode === "solo") G.totalRounds = packPrefs(ids[0]).rounds || Infinity;
+  else G.totalRounds = mode === "daily" ? DAILY_COUNT : 1;
   if (mode === "solo" || mode === "party") {
     const tag = ids.length > 1 ? "mixed" : ids[0];
     track(`${tag}_game_start_${mode}`);
@@ -81,11 +82,12 @@ function preload(urls, timeout = 3500) {
   return Promise.race([Promise.all(urls.filter(Boolean).map(u => new Promise(res => { const i = new Image(); i.onload = i.onerror = res; i.src = u; }))), sleep(timeout)]);
 }
 async function countdown(label) {
-  const ov = $("#countdown"), num = $("#cdNum"); $("#cdLabel").textContent = label; ov.hidden = false;
-  for (const v of ["3", "2", "1", "Action!"]) {
-    num.textContent = v; num.className = "num" + (v === "Action!" ? " action" : ""); void num.offsetWidth; num.classList.add("go");
-    v === "Action!" ? sfx.action() : sfx.count(); buzz(v === "Action!" ? 40 : 15);
-    await sleep(v === "Action!" ? 520 : 560);
+  const ov = $("#countdown"), num = $("#cdNum"), pid = G.item?.pk || G.packIds[0], go = pid === "movies" ? "Action!" : "Go!";
+  $("#cdLabel").textContent = label; $("#cdIcon").innerHTML = (ICONS[pid] || ICONS.movies).replace(/width="22" height="22"/, 'width="64" height="64"').replace('stroke-width="1.6"', 'stroke-width="1.4"'); ov.hidden = false;
+  for (const v of ["3", "2", "1", go]) {
+    num.textContent = v; num.className = "num" + (v === go ? " action" : ""); void num.offsetWidth; num.classList.add("go");
+    v === go ? sfx.action() : sfx.count(); buzz(v === go ? 40 : 15);
+    await sleep(v === go ? 520 : 560);
   }
   ov.hidden = true;
 }
@@ -108,11 +110,10 @@ async function startRound() {
   $("#ring").classList.remove("low"); $("#ring").hidden = G.mode === "practice";
   updateHud(); renderActHeader();
 
-  const total = G.mode === "daily" ? DAILY_COUNT : G.mode === "party" ? G.totalRounds : 0;
   const label = G.mode === "daily" ? `${def.name} daily #${dailyNumber()} · ${G.roundNo} of ${DAILY_COUNT}`
     : G.mode === "practice" ? "Practice round"
-    : G.mode === "party" ? `${G.cur >= 0 ? `${G.players[G.cur].name}'s turn · ` : ""}${G.packIds.length > 1 ? def.name + " · " : ""}Round ${G.roundNo} of ${total}`
-    : `${def.name} · Round ${G.roundNo}`;
+    : G.mode === "party" ? `${G.cur >= 0 ? `${G.players[G.cur].name}'s turn · ` : ""}${G.packIds.length > 1 ? def.name + " · " : ""}${roundText()}`
+    : `${def.name} · ${roundText()}`;
   await Promise.all([preload(G.plan.preload || []), countdown(label)]);
   if (token !== G.token) return;
 
@@ -276,19 +277,21 @@ $("#quitBtn").addEventListener("click", () => {
 });
 
 // ================= HUD =================
+function roundText() { return G.totalRounds === Infinity ? `Round ${G.roundNo || 1}` : `Round ${G.roundNo || 1} of ${G.totalRounds}`; }
+function moreRounds() { return G.roundNo < G.totalRounds; }
 function updateHud() {
   const solo = G.mode === "solo";
   $("#hudLives").hidden = !solo; $("#hudMode").hidden = solo;
   $("#hudLives").innerHTML = Array.from({ length: LIVES }, (_, i) => starSvg(i >= G.lives)).join("");
   $("#hudLives").setAttribute("aria-label", `${G.lives} of ${LIVES} lives left`);
-  $("#hudMode").textContent = G.mode === "daily" ? `Daily · ${G.roundNo || 1}/${DAILY_COUNT}` : G.mode === "party" ? `Round ${G.roundNo || 1}/${G.totalRounds}` : "Practice";
+  $("#hudMode").textContent = G.mode === "daily" ? `Daily · ${G.roundNo || 1}/${DAILY_COUNT}` : G.mode === "party" ? roundText() : "Practice";
   if (G.mode === "party") {
     if (G.cur >= 0) { const pl = G.players[G.cur]; $("#hudScore").textContent = pl.score.toLocaleString(); $("#hudStreak").textContent = `${pl.name}'s turn`; }
     else { const lead = [...G.players].sort((a, b) => b.score - a.score)[0]; $("#hudScore").textContent = lead.score.toLocaleString(); $("#hudStreak").textContent = lead.score ? `${lead.name} leads` : "Shout it out!"; }
     return;
   }
   $("#hudScore").textContent = G.score.toLocaleString();
-  $("#hudStreak").textContent = G.streak ? `×${mult().toFixed(1)} streak` : "No streak yet";
+  $("#hudStreak").textContent = [roundText(), G.streak ? `×${mult().toFixed(1)} streak` : ""].filter(Boolean).join(" · ");
 }
 
 // ================= end of round =================
@@ -363,12 +366,13 @@ function showReveal({ won, reason, pts, p, m, badge, lostStar }) {
   $("#revLives").setAttribute("aria-label", `${G.lives} of ${LIVES} lives left`);
   $("#revStarring").innerHTML = r.more || "";
   $("#reportBtn").textContent = `Report a problem with this ${def.unit}`;
-  const nb = $("#revNextLbl"), U = def.unit[0].toUpperCase() + def.unit.slice(1);
+  const nb = $("#revNextLbl"), noun = G.packIds.length > 1 ? "round" : def.unit;
   if (G.mode === "practice") nb.textContent = "Go to the main menu";
   else if (G.mode === "daily") nb.textContent = G.roundNo < DAILY_COUNT ? `Next (${G.roundNo + 1} of ${DAILY_COUNT})` : "See today's result";
-  else if (G.mode === "party") nb.textContent = G.roundNo >= G.totalRounds ? "See the winners" : G.pstyle === "turns" ? `Pass to ${G.players[G.roundNo % G.players.length].name}` : `Next round (${G.roundNo + 1} of ${G.totalRounds})`;
-  else nb.textContent = G.lives > 0 ? `Next ${G.packIds.length > 1 ? "round" : def.unit}` : "See the awards";
-  void U;
+  else if (G.mode === "party") nb.textContent = !moreRounds() ? "See the winners" : G.pstyle === "turns" ? `Pass to ${G.players[G.roundNo % G.players.length].name}` : `Next ${noun}`;
+  else nb.textContent = G.lives > 0 && moreRounds() ? `Next ${noun}` : "See the awards";
+  $("#revEnd").hidden = !(G.mode === "solo" || G.mode === "party") || (G.mode === "solo" ? !(G.lives > 0 && moreRounds()) : !moreRounds());
+  $("#revEnd").textContent = "End game"; delete $("#revEnd").dataset.armed;
   show("revealScreen");
   if (won && G.mode !== "practice") {
     if (G.stage === 0) { winChime(3); buzz([90, 50, 90, 50, 200]); confetti(180); }
@@ -385,7 +389,7 @@ function showReveal({ won, reason, pts, p, m, badge, lostStar }) {
 function onReveal() { return $("#revealScreen").classList.contains("active") && G.mode !== "practice"; }
 function startAuto() {
   const nb = $("#revNextLbl");
-  const more = (G.mode === "solo" && G.lives > 0) || (G.mode === "daily" && G.roundNo < DAILY_COUNT) || (G.mode === "party" && G.roundNo < G.totalRounds);
+  const more = (G.mode === "solo" && G.lives > 0 && moreRounds()) || (G.mode === "daily" && G.roundNo < DAILY_COUNT) || (G.mode === "party" && moreRounds());
   if (!more || DB.prefs.autoNext === false) return;
   if (document.hidden) { G.autoResume = true; return; }
   const tk = G.token, base = nb.textContent, btn = $("#revNext"); let left = 3;
@@ -396,18 +400,24 @@ function startAuto() {
   G.autoBase = base;
 }
 function stopAuto() { clearTimeout(G.autoNext); clearInterval(G.autoTick); $("#revNext").classList.remove("auto"); $("#revStay").hidden = true; if (G.autoBase) $("#revNextLbl").textContent = G.autoBase; G.autoBase = null; }
+$("#revEnd").addEventListener("click", e => {
+  const b = e.currentTarget; stopAuto(); G.autoResume = false;
+  if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "Tap again to end the game"; setTimeout(() => { if (b.dataset.armed) { delete b.dataset.armed; b.textContent = "End game"; } }, 3500); return; }
+  delete b.dataset.armed; track(`${G.packIds.length > 1 ? "mixed" : G.packIds[0]}_game_ended_early`);
+  G.mode === "party" ? showPodium() : gameOver();
+});
 $("#revStay").addEventListener("click", () => { stopAuto(); G.autoResume = false; toast("Take your time. Tap Next when you're ready."); });
 $("#revNext").addEventListener("click", () => {
   stopAuto(); G.autoResume = false;
   if (G.mode === "practice") { goHub(); toast("You're all set. Enjoy the show!"); return; }
   if (G.mode === "daily") { if (G.roundNo < DAILY_COUNT) { show("gameScreen"); startRound(); } else finishDaily(); return; }
-  if (G.mode === "party") { if (G.roundNo < G.totalRounds) { show("gameScreen"); startRound(); } else showPodium(); return; }
-  if (G.lives <= 0) { gameOver(); return; }
+  if (G.mode === "party") { if (moreRounds()) { show("gameScreen"); startRound(); } else showPodium(); return; }
+  if (G.lives <= 0 || !moreRounds()) { gameOver(); return; }
   show("gameScreen"); startRound();
 });
 
 // ================= report a problem =================
-const REPORT_KEY = "guessnight.reports", APP_VERSION = "4.0";
+const REPORT_KEY = "guessnight.reports", APP_VERSION = "4.1";
 let reportReason = "";
 $("#reportBtn").addEventListener("click", () => {
   stopAuto(); G.autoResume = false; reportReason = "";
@@ -491,7 +501,7 @@ function gameOver() {
 }
 $("#overAgain").addEventListener("click", () => startGame("solo", G.packIds));
 $("#overHome").addEventListener("click", () => goHome());
-$("#overShare").addEventListener("click", () => { const def = PACK_DEFS[G.packIds[0]]; shareText(`I scored ${G.score.toLocaleString()} on Guess Night (${def.name}) and named ${G.nailed.length} ${G.nailed.length === 1 ? def.unit : def.units}. Can you beat me? 🎬`); });
+$("#overShare").addEventListener("click", () => { const def = PACK_DEFS[G.packIds[0]]; shareText(`I scored ${G.score.toLocaleString()} on Guess Night (${def.name}) and named ${G.nailed.length} ${G.nailed.length === 1 ? def.unit : def.units}. Can you beat me? ${({ movies: "🎬", tv: "📺", countries: "🌍", brands: "🛍️" })[G.packIds[0]] || ""}`); });
 
 // ================= daily =================
 const SQ = ["⬛", "🟨", "🟧", "🟫", "🟥"];
