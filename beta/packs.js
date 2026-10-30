@@ -9,6 +9,7 @@ const ICONS = {
   actors: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></svg>',
   cities: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
   animals: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="6" cy="9" r="2"/><circle cx="10" cy="5.5" r="2"/><circle cx="14" cy="5.5" r="2"/><circle cx="18" cy="9" r="2"/><path d="M12 11c-3 0-6 4-6 7a3 3 0 0 0 3 3c1.2 0 2-.6 3-.6s1.8.6 3 .6a3 3 0 0 0 3-3c0-3-3-7-6-7z"/></svg>',
+  people: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>',
 };
 const LOCK_SVG = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 
@@ -244,8 +245,34 @@ const PACK_DEFS = {
     reveal: item => ({ img: item.photo, wide: true, meta: [item.sci, whereText(item.where)].filter(Boolean).join(" · "), more: `${esc(item.factFull)}${creditLine(item.credit)}${item.shadow ? `<div class="credit">Silhouette: ${esc(item.shadow.by)} · <a href="${esc(item.shadow.src)}" target="_blank" rel="noopener">${esc(item.shadow.lic)}</a> (PhyloPic)</div>` : ""}` }),
     faces: items => shuffle(items.filter(m => m.f && m.shadow)).slice(0, 3).map(m => ({ html: `<img class="silhouette" src="${esc(m.shadow.url)}" alt="">` })),
   },
+  people: {
+    id: "people", name: "Famous people", unit: "person", units: "people",
+    tagline: "A face in close-up. Name them before history moves on.",
+    blurb: "Leaders, scientists, artists and icons",
+    filter: { label: "Fields", options: [["politics", "Politics"], ["science", "Science"], ["music", "Music"], ["business", "Business"], ["arts", "Arts & writing"], ["history", "History"]] },
+    years: false,
+    acts: [
+      { n: "Clue 1", name: "The close-up", hint: "A tight crop of their photo." },
+      { n: "Clue 2", name: "The basics", hint: "What they did, where and when." },
+      { n: "Clue 3", name: "The record", hint: "Three things they're known for." },
+      { n: "Clue 4", name: "The portrait", hint: "Last clue. The full picture." },
+    ],
+    partial: null, nearText: "",
+    practice: ["Albert Einstein", "Mahatma Gandhi"],
+    reasons: ["Wrong or unclear photo", "Wrong facts", "Achievement gives it away", "Wrong person", "Other"],
+    init(raw) { return { items: raw.items, groups: {}, decoys: raw.decoys || [] }; },
+    plan: (item, diff) => ({ zoom: diff === "hard" ? 3.4 : diff === "medium" || diff === "mixed" ? 2.7 : 2.1, preload: [item.photo] }),
+    render(pl, stage, ui, item) {
+      if (stage < 3 && !ui.has("crop")) { ui.replace([{ html: `<img class="crop" style="--z:${pl.zoom}" src="${esc(item.photo)}" alt="Close-up crop">`, wide: true, alt: "Close-up crop of a photo" }]); ui.mark("crop"); }
+      if (stage >= 1) ui.card("basics", "The basics", [item.role && item.role[0].toUpperCase() + item.role.slice(1), item.country && `Born in ${item.country}`, item.era].filter(Boolean).join(" · "));
+      if (stage >= 2) { ui.compact(true); ui.card("ach", "Known for", "", { html: `<ul class="ach">${item.ach.map(a => `<li>${esc(a)}</li>`).join("")}</ul>` }); }
+      if (stage >= 3 && !ui.has("full")) { ui.replace([{ img: item.photo, wide: true, alt: "Portrait" }]); ui.mark("full"); }
+    },
+    reveal: item => ({ img: item.photo, meta: [item.country, item.era].filter(Boolean).join(" · "), more: `${item.achFull.map(esc).join(" · ")}${creditLine(item.credit)}` }),
+    faces: items => shuffle(items.filter(m => m.f)).slice(0, 3).map(m => ({ img: m.photo })),
+  },
 };
-const PACK_ORDER = ["movies", "tv", "actors", "countries", "cities", "animals", "brands"];
+const PACK_ORDER = ["movies", "tv", "actors", "people", "countries", "cities", "animals", "brands"];
 // Continents map for animals (outlines come from the animals pack).
 let CONTINENTS = {};
 const CONT_NAMES = { AF: "Africa", AS: "Asia", EU: "Europe", NA: "North America", SA: "South America", OC: "Oceania", AN: "Antarctica", OCEAN: "the oceans" };

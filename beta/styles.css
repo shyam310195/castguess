@@ -334,3 +334,6 @@
     .map-svg.cont.sea-on { background: #17406b; }
     .map-svg.cont path { fill: #2a3757; stroke: #0a1a33; stroke-width: .4; }
     .map-svg.cont path.on { fill: var(--gold); }
+
+    .actor .ph img.crop { transform: scale(var(--z, 2.6)); transform-origin: 50% 26%; object-position: 50% 20%; }
+    ul.ach { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; line-height: 1.4; }

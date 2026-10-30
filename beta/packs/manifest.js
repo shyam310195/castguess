@@ -7,4 +7,5 @@ window.GN_MANIFEST = {
   actors: { ready: true, count: 750, v: "4.2" },
   cities: { ready: true, count: 350, v: "4.2" },
   animals: { ready: true, count: 194, v: "4.2" },
+  people: { ready: true, count: 234, v: "4.2" },
 };
