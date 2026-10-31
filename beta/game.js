@@ -419,7 +419,7 @@ $("#revNext").addEventListener("click", () => {
 });
 
 // ================= report a problem =================
-const REPORT_KEY = "guessnight.reports", APP_VERSION = "4.3";
+const REPORT_KEY = "guessnight.reports", APP_VERSION = "4.4";
 let reportReason = "";
 $("#reportBtn").addEventListener("click", () => {
   stopAuto(); G.autoResume = false; reportReason = "";
