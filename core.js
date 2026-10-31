@@ -128,6 +128,39 @@ function nearMiss(value, m) {
   return answers(m).some(t => (base(g).length >= 3 && base(g) === base(t)) || t.startsWith(g + " ") || g.startsWith(t + " "));
 }
 
+// ================= voice: find the answer inside a longer phrase =================
+// Words that only frame an answer ("it's the film Up") and never count as part of it.
+const VOICE_FRAME = new Set("i think its it s is it was that this answer my guess maybe um uh oh ok okay so well like and called named film films movie movies show series tv actor actress star player person city town place country animal brand one in from of by guess".split(" "));
+const VOICE_COMMON = new Set("up her war don him us it she he me you we they go run home love life time day night man men woman boy girl king queen star stars red blue black white gold green fire ice water rain world earth heart dark light hero force fast free last first new old big little good bad lucky happy sorry yes no hi hello".split(" "));
+// Returns { how: "exact" | "group", heard } or null.
+function voiceMatch(alts, m) {
+  const P = m.pk;
+  for (const a of alts) { const c = cleanSpoken(a); if (matches(a, m) || (c && matches(c, m))) return { how: "exact", heard: a }; }
+  for (const a of alts) {
+    const words = cleanSpoken(a).split(" ").filter(Boolean);
+    const core = words.filter(w => !VOICE_FRAME.has(w)).join(" ");
+    if (core && matches(core, m)) return { how: "exact", heard: a };   // "the film Up", "I think it's Her"
+    let best = null;
+    for (let n = Math.min(6, words.length); n >= 1 && !best; n--) {
+      for (let i = 0; i + n <= words.length; i++) {
+        const span = words.slice(i, i + n);
+        if (VOICE_FRAME.has(span[0]) || VOICE_FRAME.has(span[n - 1])) continue;
+        const text = span.join(" ");
+        if (n === 1 && (text.length < 4 || VOICE_COMMON.has(text))) continue;   // short common words only count when said alone
+        if (!matches(text, m)) continue;
+        // "don 2" must not match "Don": a longer span here that is another title wins
+        let shadowed = false;
+        for (let L = n + 1; L <= Math.min(6, words.length) && !shadowed; L++)
+          for (let j = Math.max(0, i + n - L); j <= i && j + L <= words.length; j++) { const o = P && P.index.get(compact(words.slice(j, j + L).join(" "))); if (o && o !== m) { shadowed = true; break; } }
+        if (!shadowed) { best = { how: "exact", heard: a }; break; }
+      }
+    }
+    if (best) return best;
+  }
+  if (m.pk && m.pk.def.partial) for (const a of alts) { const c = cleanSpoken(a); if (groupMatch(a, m) || (c && groupMatch(c, m))) return { how: "group", heard: a }; }
+  return null;
+}
+
 // ================= anonymous analytics =================
 const IS_LIVE = /\.github\.io$/.test(location.hostname);
 const trackQueue = [];

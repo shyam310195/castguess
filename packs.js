@@ -157,7 +157,7 @@ const PACK_DEFS = {
     faces: items => shuffle(items).slice(0, 3).map(m => ({ html: `<div class="swatches">${m.colours.map(c => `<i style="background:${esc(c)}"></i>`).join("")}</div>` })),
   },
   actors: {
-    id: "actors", name: "Actors", unit: "star", units: "stars",
+    id: "actors", people: true, name: "Actors", unit: "star", units: "stars",
     tagline: "Three scenes from their best work. Name the star before the curtain call.",
     blurb: "Hollywood, Bollywood & TV stars, from their films",
     filter: { label: "Stars from", options: [["hollywood", "Hollywood"], ["bollywood", "Bollywood"], ["tv", "TV"]] },
@@ -173,16 +173,18 @@ const PACK_DEFS = {
     reasons: ["Wrong film still", "Wrong career facts", "Wrong co-stars", "Wrong photo", "Other"],
     init(raw) {
       const IMG = raw.img;
-      return { items: raw.items.map(a => ({ ...a, photo: IMG + "h632" + a.photo, known: a.known.map(([t, y, k, still, poster]) => ({ t, y, k, still: IMG + "w780" + still, poster: poster ? IMG + "w500" + poster : "" })) })), groups: {}, decoys: raw.decoys || [] };
+      return { items: raw.items.map(a => ({ ...a, photo: IMG + "h632" + a.photo,
+        known: a.known.map(([t, y, k, still, poster]) => ({ t, y, k, still: IMG + "w780" + still, poster: poster ? IMG + "w500" + poster : "" })),
+        clean: (a.clean || []).map(([t, y, k, still]) => ({ t, y, k, still: IMG + "w780" + still })) })), groups: {}, decoys: raw.decoys || [] };
     },
     plan(item, diff, rng) {
-      const k = item.known, n = k.length;
-      const idx = diff === "supereasy" || diff === "easy" ? [0, 1, 2] : diff === "medium" ? [0, Math.min(2, n - 1), Math.min(3, n - 1)] : [Math.min(1, n - 1), Math.min(3, n - 1), n - 1];
-      const picks = [...new Set(idx)].map(i => k[i]); for (const x of k) { if (picks.length >= 3) break; if (!picks.includes(x)) picks.push(x); }
+      // Stills checked by face recognition not to show the actor come first; any gap is filled with a blurred still
+      const picks = item.clean.slice(0, 3).map(x => ({ ...x, blur: false }));
+      for (const x of item.known) { if (picks.length >= 3) break; if (!picks.some(p => p.t === x.t)) picks.push({ ...x, blur: true }); }
       return { stills: shuffle(picks, rng), preload: [...picks.map(x => x.still), item.photo] };
     },
     render(pl, stage, ui, item) {
-      if (!ui.has("init")) { ui.tiles(pl.stills.map(x => ({ img: x.still, alt: "Scene from one of their films" }))); ui.locked("Their face"); ui.mark("init"); }
+      if (!ui.has("init")) { ui.tiles(pl.stills.map(x => x.blur ? { html: `<img class="still-blur" src="${esc(x.still)}" alt="Blurred scene">`, alt: "Blurred scene from one of their films" } : { img: x.still, alt: "Scene from one of their films" })); ui.locked("Their face"); ui.mark("init"); }
       if (stage >= 1) ui.card("career", "The career", [`On screen ${item.active}`, [item.born && (item.died ? `${item.born}–${item.died}` : `Born ${item.born}`), item.country && `${item.born ? "in" : "From"} ${item.country}`].filter(Boolean).join(" ")].filter(Boolean).join(" · "));
       if (stage >= 2) { ui.compact(true); ui.card("costars", "Often seen with", item.costars.join(", ")); }
       if (stage >= 3) ui.unlock({ img: item.photo, alt: "Their photo" });
@@ -247,7 +249,7 @@ const PACK_DEFS = {
     faces: items => shuffle(items.filter(m => m.f && m.shadow)).slice(0, 3).map(m => ({ html: `<img class="silhouette" src="${esc(m.shadow.url)}" alt="">` })),
   },
   people: {
-    id: "people", name: "Famous people", unit: "person", units: "people",
+    id: "people", people: true, name: "Famous people", unit: "person", units: "people",
     tagline: "A face in close-up. Name them before history moves on.",
     blurb: "Leaders, scientists, artists and icons",
     filter: { label: "Fields", options: [["politics", "Politics"], ["science", "Science"], ["music", "Music"], ["business", "Business"], ["arts", "Arts & writing"], ["history", "History"]] },
@@ -273,7 +275,7 @@ const PACK_DEFS = {
     faces: items => shuffle(items.filter(m => m.f)).slice(0, 3).map(m => ({ img: m.photo })),
   },
   sports: {
-    id: "sports", name: "Sports stars", unit: "player", units: "players",
+    id: "sports", people: true, name: "Sports stars", unit: "player", units: "players",
     tagline: "Their teams, their numbers, their moment. Name the player before the final whistle.",
     blurb: "Cricket, football, tennis & more",
     filter: { label: "Sports", options: [["cricket", "Cricket"], ["football", "Football"], ["hockey", "Hockey"], ["tennis", "Tennis"], ["basketball", "Basketball"], ["athletics", "Athletics"], ["other", "Other sports"]] },
@@ -320,7 +322,7 @@ function continentMap(w) {
 let WORLD_PATH = "";
 function dotMap(lon, lat, w = 90, h = 56) {
   const x0 = Math.max(-180, Math.min(180 - w, lon - w / 2)), y0 = Math.max(-84, Math.min(84 - h, -lat - h / 2));
-  return `<svg class="map-svg world" viewBox="${x0.toFixed(1)} ${y0.toFixed(1)} ${w} ${h}" preserveAspectRatio="xMidYMid slice"><path class="land" d="${WORLD_PATH}"/><circle class="ping" cx="${lon}" cy="${-lat}" r="3.2"/><circle class="dot" cx="${lon}" cy="${-lat}" r="1.1"/></svg>`;
+  return `<svg class="map-svg world" viewBox="${x0.toFixed(1)} ${y0.toFixed(1)} ${w} ${h}" preserveAspectRatio="xMidYMid meet"><path class="land" d="${WORLD_PATH}"/><circle class="ping" cx="${lon}" cy="${-lat}" r="3.2"/><circle class="dot" cx="${lon}" cy="${-lat}" r="1.1"/></svg>`;
 }
 // Photo attribution for Wikimedia Commons images.
 const creditLine = c => c ? `<div class="credit">Photo: ${esc(c.by)} · <a href="${esc(c.src)}" target="_blank" rel="noopener">${esc(c.lic)}</a></div>` : "";
@@ -338,6 +340,12 @@ async function loadPack(id) {
   P.items = items.map(m => ({ ...m, pop: m.pop ?? 1, pk: P }));
   P.groups = groups || {};
   Object.values(P.groups).forEach(gr => { gr.keys = [...new Set([gr.n, ...(gr.a || [])].map(compact).filter(Boolean))]; });
+  // People packs: a distinctive single name also counts ("Sachin", "Federer"), if no one else in the pack shares it
+  if (def.people) {
+    const tok = m => normalize(m.title).split(" ").filter(w => w.length >= 5 && !VOICE_COMMON.has(w));
+    const count = new Map(); P.items.forEach(m => new Set(tok(m)).forEach(w => count.set(w, (count.get(w) || 0) + 1)));
+    P.items.forEach(m => { const extra = tok(m).filter(w => count.get(w) === 1 && w !== normalize(m.title)); if (extra.length) m.aliases = [...(m.aliases || []), ...extra]; });
+  }
   P.index = new Map();
   P.items.forEach(m => [m.title, ...(m.aliases || [])].forEach(t => { const k = compact(t); if (k && !P.index.has(k)) P.index.set(k, m); }));
   const map = new Map();

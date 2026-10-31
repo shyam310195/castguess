@@ -255,9 +255,9 @@ function onVoice(e) {
 function handleSpoken(alts, final) {
   if (onReveal()) { if (final && /\b(next|next one|next film|next round|go|continue|keep going|carry on)\b/.test(cleanSpoken(alts[0]))) $("#revNext").click(); return; }
   if (G.over || G.whoPending) return;
-  const m = G.item;
-  for (const a of alts) { const c = cleanSpoken(a); if (matches(a, m) || (c && matches(c, m))) { feedback(`Heard “${a}”`, "near"); correctGuess(); return; } }
-  for (const a of alts) { const c = cleanSpoken(a); if (groupMatch(a, m) || (c && groupMatch(c, m))) { feedback(`Heard “${a}” · ${m.pk.def.partial.toLowerCase()}`, "near"); correctGuess(true); return; } }
+  const m = G.item, hit = voiceMatch(alts, m);
+  if (hit && hit.how === "exact") { feedback(`Heard “${hit.heard}”`, "near"); correctGuess(); return; }
+  if (hit && hit.how === "group") { feedback(`Heard “${hit.heard}” · ${m.pk.def.partial.toLowerCase()}`, "near"); correctGuess(true); return; }
   if (!final) return;
   const n = cleanSpoken(alts[0]);
   if (/\b(next clue|next act|another clue|more clues?)\b/.test(n)) { if (G.stage < 3) { advance(); toast("Next clue"); } return; }
