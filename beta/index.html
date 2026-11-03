@@ -17,7 +17,7 @@
       gc.dataset.goatcounter = "https://shyam3101.goatcounter.com/count"; document.head.appendChild(gc);
     }
   </script>
-  <link rel="stylesheet" href="styles.css?v=4.4" />
+  <link rel="stylesheet" href="styles.css?v=4.5" />
 </head>
 <body>
 <div id="app">
@@ -85,13 +85,7 @@
       <div class="label">How do you play?</div>
       <div class="seg two" id="pStyle" role="group" aria-label="Party style"><button data-v="shout">Shout it out</button><button data-v="turns">Take turns</button></div>
       <div class="muted" id="pStyleNote" style="font-size:13px;line-height:1.5"></div>
-      <div id="pRounds"><div class="rounds-box" data-rounds><div class="yp-head"><span class="label" data-rl>Rounds</span><b data-rv>Endless</b></div>
-        <div class="range"><div class="rail"><div class="fill" data-rf style="left:0"></div></div><input type="range" min="0" max="5" step="1" data-rr aria-label="Number of rounds"></div>
-        <div class="rticks"><span>5</span><span>10</span><span>15</span><span>20</span><span>30</span><span>∞</span></div></div></div>
-      <div class="muted" id="pRoundsNote" style="font-size:13px"></div>
-      <div class="label">Difficulty</div>
-      <div class="seg five" id="pDiff" role="group" aria-label="Difficulty"><button data-v="supereasy">Super easy</button><button data-v="easy">Easy</button><button data-v="medium">Medium</button><button data-v="hard">Hard</button><button data-v="mixed">Mixed</button></div>
-      <div class="switch-row"><span id="lblPartyVoice">Hands-free voice<small>The app hears the right answer for you</small></span><button class="switch" role="switch" id="swPartyVoice" aria-labelledby="lblPartyVoice"></button></div>
+      <div class="opts" id="partyOptions"></div>
       <button class="btn primary wide" id="startParty">Start party game</button>
     </div>
 
@@ -106,32 +100,7 @@
       <h1 class="title" id="homeTitle" style="font-size:44px;text-align:center"></h1>
       <p class="muted" id="homeGreeting" style="margin:0;text-align:center;font-size:15px;max-width:300px;line-height:1.5"></p>
     </div>
-    <div style="display:flex;flex-direction:column;gap:10px" id="homeFilterBox">
-      <div class="label" id="homeFilterLabel"></div>
-      <div class="row" style="flex-wrap:wrap;gap:6px" id="homeFilters"></div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:10px" id="homeFilter2Box" hidden>
-      <div class="label" id="homeFilter2Label"></div>
-      <div class="row" style="flex-wrap:wrap;gap:6px" id="homeFilters2"></div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <div class="label">Difficulty</div>
-      <div class="seg five" id="homeDiff" role="group" aria-label="Difficulty"><button data-v="supereasy">Super easy</button><button data-v="easy">Easy</button><button data-v="medium">Medium</button><button data-v="hard">Hard</button><button data-v="mixed">Mixed</button></div>
-      <div class="diff-note" id="homeDiffNote"></div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <div class="label">Time per clue</div>
-      <div class="seg three" id="homeTime" role="group" aria-label="Time per clue"><button data-v="15">15 sec</button><button data-v="30">30 sec</button><button data-v="60">1 min</button></div>
-    </div>
-    <div class="switch-row"><span id="lblHomeVoice">Hands-free voice<small id="homeVoiceNote">Say your answer out loud to guess</small></span><button class="switch" role="switch" id="swHomeVoice" aria-labelledby="lblHomeVoice"></button></div>
-    <div style="display:flex;flex-direction:column;gap:10px" id="homeYearsBox">
-      <button class="collapse-row" id="yearsToggle" aria-expanded="false" aria-controls="homeYears"><span>Years: <span id="yearsSummary" style="color:var(--gold)">All</span> <span class="match" id="homeMatchMini"></span></span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div id="homeYears" class="yp" data-yp hidden></div>
-    </div>
-    <div id="homeRounds"><div class="rounds-box" data-rounds><div class="yp-head"><span class="label" data-rl>Rounds</span><b data-rv>Endless</b></div>
-        <div class="range"><div class="rail"><div class="fill" data-rf style="left:0"></div></div><input type="range" min="0" max="5" step="1" data-rr aria-label="Number of rounds"></div>
-        <div class="rticks"><span>5</span><span>10</span><span>15</span><span>20</span><span>30</span><span>∞</span></div></div></div>
-    <div class="match" id="homeMatchLine"></div>
+    <div class="opts" id="homeOptions"></div>
     <div style="display:flex;flex-direction:column;gap:10px;margin-top:auto">
       <button class="btn primary wide" id="startSolo">Start solo game</button>
       <button class="daily-card" id="dailyCard"></button>
@@ -340,10 +309,10 @@
 <canvas id="confetti" hidden></canvas>
 <div class="toast" id="toast" hidden role="status"></div>
 
-<script src="packs/manifest.js?v=4.4"></script>
-<script src="core.js?v=4.4"></script>
-<script src="packs.js?v=4.4"></script>
-<script src="game.js?v=4.4"></script>
-<script src="app.js?v=4.4"></script>
+<script src="packs/manifest.js?v=4.5"></script>
+<script src="core.js?v=4.5"></script>
+<script src="packs.js?v=4.5"></script>
+<script src="game.js?v=4.5"></script>
+<script src="app.js?v=4.5"></script>
 </body>
 </html>

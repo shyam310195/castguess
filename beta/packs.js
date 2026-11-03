@@ -360,13 +360,20 @@ async function loadPack(id) {
 }
 
 // ================= pools =================
-function filterValues(id, which = "filter") { const d = PACK_DEFS[id]; const f = packPrefs(id)[which]; return d[which] ? (f && f.length ? f : d[which].options.map(o => o[0])) : null; }
-function yearOk(id, m) { const pp = packPrefs(id), y = m.year || 0; if (!PACK_DEFS[id].years) return true; return (pp.yearFrom == null || y >= pp.yearFrom) && (pp.yearTo == null || y <= pp.yearTo); }
-function pool(id, difficulty = DB.prefs.difficulty) {
+// Settings scope: solo and party remember their choices separately.
+// Party keeps its own difficulty/time/auto-next/skips in DB.prefs.party and per-category filters in DB.prefs.party.packs.
+let OPT_CTX = "solo";
+function optPrefs(id, ctx = OPT_CTX) { if (ctx !== "party") return packPrefs(id); const pp = DB.prefs.party; pp.packs = pp.packs || {}; return (pp.packs[id] = pp.packs[id] || {}); }
+function ctxGet(key, ctx = OPT_CTX) { const v = ctx === "party" ? DB.prefs.party[key] : undefined; return v === undefined ? DB.prefs[key] : v; }
+function ctxSet(key, value, ctx = OPT_CTX) { if (ctx === "party") DB.prefs.party[key] = value; else DB.prefs[key] = value; save(); }
+function filterValues(id, which = "filter", ctx = OPT_CTX) { const d = PACK_DEFS[id]; const f = optPrefs(id, ctx)[which]; return d[which] ? (f && f.length ? f : d[which].options.map(o => o[0])) : null; }
+function yearOk(id, m, ctx = OPT_CTX) { const pp = optPrefs(id, ctx), y = m.year || 0; if (!PACK_DEFS[id].years) return true; return (pp.yearFrom == null || y >= pp.yearFrom) && (pp.yearTo == null || y <= pp.yearTo); }
+function pool(id, difficulty, ctx = OPT_CTX) {
+  difficulty = difficulty || ctxGet("difficulty", ctx);
   const P = PACKS[id]; if (!P) return [];
-  const vals = filterValues(id);
-  const f2 = P.def.filter2, vals2 = filterValues(id, "filter2");
-  const base = P.items.filter(m => (!vals || vals.includes(m.cat)) && (!f2 || vals2.includes(m[f2.key])) && yearOk(id, m));
+  const vals = filterValues(id, "filter", ctx);
+  const f2 = P.def.filter2, vals2 = filterValues(id, "filter2", ctx);
+  const base = P.items.filter(m => (!vals || vals.includes(m.cat)) && (!f2 || vals2.includes(m[f2.key])) && yearOk(id, m, ctx));
   const min = POP_MIN[difficulty] || 0;
   const famous = difficulty === "supereasy" ? base.filter(m => m.f) : base.filter(m => m.pop >= min);
   return famous.length >= 30 || famous.length === base.length ? famous : base;   // small selections keep everything

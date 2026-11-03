@@ -356,3 +356,11 @@
     .tile-wide .ph > img.blurshadow { object-fit: cover; }
     .tile-wide .ph > .team-board { position: absolute; inset: 0; }
     .actor .ph img.still-blur { width: 100%; height: 100%; object-fit: cover; filter: blur(7px) saturate(.8); transform: scale(1.12); }
+
+    /* shared category options (solo home + party setup) */
+    .opts { display: flex; flex-direction: column; gap: 18px; }
+    .opts .opt { display: flex; flex-direction: column; gap: 10px; }
+    .opts .chip-row { flex-wrap: wrap; gap: 6px; }
+    .opts [data-fbody] { display: flex; flex-direction: column; gap: 18px; padding-top: 12px; }
+    .opts [data-fbody][hidden] { display: none; }
+    .opts .pack-opts { display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1px solid var(--b1); border-radius: 8px; }
